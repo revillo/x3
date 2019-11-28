@@ -19,6 +19,20 @@ vec3.__index = {
         a.x, a.y, a.z = b.x, b.y, b.z;
     end,
 
+    fromArray = function(v, a)
+        v.x = a[1];
+        v.y = a[2];
+        v.z = a[3];
+    end,
+
+    --Spherical to cartesian coordinates. Theta around z axis.
+    --theta : (0, 2pi) ,  phi : (0, pi)
+    fromSphere = function(v, theta, phi, radius)
+        v.x = math.sin(theta) * math.sin(phi) * radius;
+        v.y = math.cos(theta) * math.sin(phi) * radius;
+        v.z = math.cos(phi) * radius;
+    end,
+
     add = function(a, b)
         a.x = a.x + b.x;
         a.y = a.y + b.y;
@@ -106,6 +120,10 @@ vec3.__index = {
         v.x = m[0] * x + m[4] * y + m[8] * z + m[12] * w;
         v.y = m[1] * x + m[5] * y + m[9] * z + m[13] * w;
         v.z = m[2] * x + m[6] * y + m[10] * z + m[14] * w;
+    end,
+
+    components = function(v)
+        return v.x, v.y, v.z;
     end,
 
     __tostring = function(a)

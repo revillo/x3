@@ -31,7 +31,7 @@ love.resize = function()
     resizeCamera();
 end
 
-local floor;
+local floor, ball, cube;
 local mat4 = c3.math.mat4;
 local vec3 = c3.math.vec3;
 local quat = c3.math.quat;
@@ -39,24 +39,37 @@ local quat = c3.math.quat;
 love.load = function()
     resizeCamera();
 
-    camera.position:set(0, 0, 5);
+    camera.position:set(0, 0, 6);
     camera.target:set(0,0,0);
     camera.up:set(0,1,0);
 
     floor = c3.scene.entity(
-        c3.mesh.planeZ(1, 1),
-        c3.material.unlitColor({1,0,0,1})
+        c3.mesh.planeY(5, 5),
+        c3.material.unlitColor({0.5, 0.5, 0.5,1})
     );
 
-    floor.position:set(0,0.0,0);
+    floor.position:set(0,0,0);
     root:add(floor);
 
+    ball = c3.scene.entity(
+        c3.mesh.sphere(1, 16, 16),
+        c3.material.debugTexCoords()
+    );
+
+    ball.position:set(0, 0.5, 0);
+    root:add(ball);
+
+    cube = c3.scene.entity(
+        c3.mesh.box(1, 1, 1),
+        c3.material.debugNormals()
+    );
+
+    cube.position:set(1.5, 0.5, 0.0)
+    root:add(cube);
 --[[
     floor:updateTransform();
     print("floor", floor.transform:__tostring());
     
-
-
     local m1 = mat4();
     local m2 = mat4();
     local m3 = mat4();
@@ -74,12 +87,17 @@ love.load = function()
 end
 
 love.update = function()
-
+    
     local t = love.timer.getTime();
 
+    camera.position:set(math.cos(t) * 5, 5, math.sin(t) * 5);
+    camera.target:set(0,0,0);
+
+    --[[
     camera.position:set(0, 0, 5 + 2 * math.cos(t));
     camera.target:set(math.sin(t), 0, 0);
     floor.rotation:setAxisAngle(vec3(0,0,1), t);
+    ]]
 
 end
 
@@ -89,5 +107,4 @@ love.draw = function()
 
     c3.graphics.render(camera, root, canvas3D);
     love.graphics.draw(canvas3D.color, 0, h, 0, 1, -1);
-    love.graphics.rectangle("fill", 0, 0, 10, 10);
 end

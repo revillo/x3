@@ -36,8 +36,6 @@ local mvp = mat4();
 
 local renderEntity;
 
-local once = true;
-
 renderEntity = function(entity, vp)
 
   entity:updateTransform();
@@ -57,41 +55,12 @@ renderEntity = function(entity, vp)
       end
     end
 
-    --local q = quat();
-    --q:setAxisAngle(vec3(0, 0, 1), love.timer.getTime() * 0.1)
-    --mvp:setRotate(q);
-    --mvp:setTranslate(vec3(0, 0, 0.9));
-    --mvp:setOrtho(-1, 1, -1, 1, -10, 10);
-    --print(mvp:__tostring());
-
     sendShaderMatrix(mat.shader, "mvp", mvp);
-
-    if (once) then
-
-    end
-
     --draw
     love.graphics.draw(entity.mesh);
   end
 
   entity:eachChild(renderEntity, vp);
-
-end
-
-c3r.clear = function(canvas3D, r, g, b, a)
-  
-  --todo fix clearing
-  --[[
-  love.graphics.setCanvas({
-    {canvas3D.color},
-    depth = true,
-    stencil = true
-  });
-
-  love.graphics.clear(r,g,b,a, true, true);
-
-  love.graphics.setCanvas();
-  ]]
 
 end
 
@@ -111,7 +80,7 @@ c3r.render = function(camera, scene, canvas3D, options)
     stencil = true
 });
 
-  love.graphics.setMeshCullMode("none");
+  love.graphics.setMeshCullMode("back");
   
   --Todo fix depth buffer
   love.graphics.setDepthMode("lequal", true);

@@ -1,23 +1,36 @@
 local shaderSource = {
 
     defaultVertex = [[
-        uniform mat4 mvp; 
-        //uniform mat4 model;
+        attribute vec3 VertexNormal;
+
+        extern mat4 mvp; 
+        //extern mat4 model;
+        
+        varying vec3 normal;
         
         vec4 position(mat4 transform_projection, vec4 vertex_position)
         {
             vec4 p = mvp * vec4(vertex_position.xyz, 1.0);
-
-            /*
-            vec4 position;
-            position.w = 1.0;
-            
-            position.x = vertex_position.x;
-            position.y = vertex_position.z;
-            position.z = 0.1;
-            */
-
+            normal = VertexNormal;
             return p;
+        }
+    ]],
+
+    debugNormalsFrag = [[
+        varying vec3 normal;
+
+        vec4 effect( vec4 color, Image texture, vec2 texture_coords, vec2 screen_coords )
+        {
+          return vec4(normal * 0.5 + vec3(0.5), 1.0);
+        }
+    ]],
+
+    debugTexCoords = [[
+        varying vec3 normal;
+
+        vec4 effect( vec4 color, Image texture, vec2 texture_coords, vec2 screen_coords )
+        {
+          return vec4(texture_coords, 0.0, 1.0);
         }
     ]],
 
@@ -33,10 +46,13 @@ local shaderSource = {
     ]]
 }
 
-local shaders = {
-    unlitColor = love.graphics.newShader(shaderSource.defaultVertex, shaderSource.unlitColorFrag)
-}
+local makeShader = love.graphics.newShader;
 
+local shaders = {
+    unlitColor = makeShader(shaderSource.defaultVertex, shaderSource.unlitColorFrag),
+    debugNormals = makeShader(shaderSource.defaultVertex, shaderSource.debugNormalsFrag),
+    debugTexCoords = makeShader(shaderSource.defaultVertex, shaderSource.debugTexCoords)
+};
 
 local material = {
 
@@ -47,6 +63,20 @@ local material = {
                 unlitColor = color
             }
         };
+    end,
+
+    debugNormals = function()
+        return {
+            shader = shaders.debugNormals,
+            uniforms = {}
+        }
+    end,
+
+    debugTexCoords = function()
+        return {
+            shader = shaders.debugTexCoords,
+            uniforms = {}
+        }
     end
 
 }
