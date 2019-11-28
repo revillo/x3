@@ -10,8 +10,8 @@ BASIC_ATTRIBUTES = {
   UV_ATTRIBUTE
 }
 
-local c3m = require('c3math');
-local vec3 = c3m.vec3;
+local x3m = require('x3math');
+local vec3 = x3m.vec3;
 
 
 local v3A = vec3();
@@ -147,7 +147,7 @@ local mesh = {
 
         for r = 0, nr do
             positions[r] = {};
-            for s = 0, ns do
+            for s = 0, slices do
                 local theta = s * sd;
                 local phi = r * rd;
                 v3A:fromSphere(theta, phi, 1.0);
@@ -159,7 +159,7 @@ local mesh = {
         for r = 0, nr-1 do
             for s = 0, ns do
 
-                local s2 = (s+1) % slices;
+                local s2 = (s+1);
 
                 addQuad(
                     positions[r][s],

@@ -1,7 +1,7 @@
-local c3m = require('c3math');
-local vec3 = c3m.vec3;
-local quat = c3m.quat;
-local mat4 = c3m.mat4;
+local x3m = require('x3math');
+local vec3 = x3m.vec3;
+local quat = x3m.quat;
+local mat4 = x3m.mat4;
 
 
 local extend = function(meta, props)
