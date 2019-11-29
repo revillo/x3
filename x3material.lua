@@ -56,6 +56,13 @@ local shaders = {
 
 local material = {
 
+    customMaterial = function(shader, uniforms)
+        return {
+            shader = shader,
+            uniforms = uniforms
+        };
+    end,
+
     unlitColor = function(color)
         return {
             shader = shaders.unlitColor,

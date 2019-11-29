@@ -5,7 +5,8 @@ local x3 = {
     graphics = require('x3render'),
     scene = require('x3scene'),
     mesh = require('x3mesh'),
-    material = require('x3material')
+    material = require('x3material'),
+    loadObj = require("loaders/x3obj")
 }
 
 local root = x3.scene.entity();
@@ -34,7 +35,7 @@ love.resize = function()
     resizeCamera();
 end
 
-local floor, ball, cube;
+local floor, ball, cube, model;
 local mat4 = x3.math.mat4;
 local vec3 = x3.math.vec3;
 local quat = x3.math.quat;
@@ -59,7 +60,7 @@ love.load = function()
         x3.material.debugTexCoords()
     );
 
-    ball.position:set(0, 0.5, 0);
+    ball.position:set(0, 0.5, 1);
     root:add(ball);
 
     cube = x3.scene.entity(
@@ -69,6 +70,14 @@ love.load = function()
 
     cube.position:set(1.5, 0.5, 0.0)
     root:add(cube);
+
+    model = x3.scene.entity(
+        x3.loadObj("models/monkey.obj").mesh,
+        x3.material.debugNormals()
+    );
+    root:add(model);
+
+    model.position:set(0.0, 1.0, 0.0)
 
 end
 

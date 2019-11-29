@@ -80,7 +80,7 @@ x3r.render = function(camera, scene, canvas3D, options)
     stencil = true
 });
 
-  love.graphics.setMeshCullMode("back");
+  love.graphics.setMeshCullMode("none");
   
   --Todo fix depth buffer
   love.graphics.setDepthMode("lequal", true);

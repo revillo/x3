@@ -218,7 +218,9 @@ local mesh = {
          return love.graphics.newMesh(
             BASIC_ATTRIBUTES, verts, "triangles", "static"
           );
-      end
+      end,
+
+    BASIC_ATTRIBUTES = BASIC_ATTRIBUTES
 }
 
 
