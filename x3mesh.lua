@@ -59,7 +59,7 @@ end
 
 local mesh = {
 
-    planeZ = function(w, h)
+    newPlaneZ = function(w, h)
         return love.graphics.newMesh(
             BASIC_ATTRIBUTES,
         {
@@ -86,7 +86,7 @@ local mesh = {
         }, "strip", "static");
     end,
 
-    planeY = function(w, h)
+    newPlaneY = function(w, h)
         return love.graphics.newMesh(
             BASIC_ATTRIBUTES,
         {
@@ -115,7 +115,7 @@ local mesh = {
         }, "strip", "static");
     end,
 
-    sphere = function(radius, rings, slices)
+    newSphere = function(radius, rings, slices)
         rings = rings or 16;
         slices = slices or 16;
 
@@ -176,7 +176,7 @@ local mesh = {
 
     end,
 
-    box = function(sx, sy, sz)
+    newBox = function(sx, sy, sz)
 
         sx, sy, sz = sx * 0.5, sy * 0.5, sz * 0.5;
 

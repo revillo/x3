@@ -35,29 +35,29 @@ love.load = function()
     camera.up:set(0,1,0);
 
     floor = x3.newEntity(
-        x3.mesh.planeY(5, 5),
-        x3.material.unlitColor({0.5, 0.5, 0.5,1})
+        x3.mesh.newPlaneY(5, 5),
+        x3.material.newUnlitColor({0.5, 0.5, 0.5,1})
     );
     floor.position:set(0,0,0);
     scene:add(floor);
 
     ball = x3.newEntity(
-        x3.mesh.sphere(1, 16, 16),
-        x3.material.debugTexCoords()
+        x3.mesh.newSphere(1, 16, 16),
+        x3.material.newDebugTexCoords()
     );
     ball.position:set(0, 0.5, 1);
     scene:add(ball);
 
     cube = x3.newEntity(
-        x3.mesh.box(1, 1, 1),
-        x3.material.debugNormals()
+        x3.mesh.newBox(1, 1, 1),
+        x3.material.newDebugNormals()
     );
     cube.position:set(1.5, 0.5, 0.0)
     scene:add(cube);
 
     model = x3.newEntity(
         x3.loadObj("models/monkey.obj").mesh,
-        x3.material.debugNormals()
+        x3.material.newDebugNormals()
     );
     scene:add(model);
     model.position:set(0.0, 1.0, 0.0)

@@ -56,14 +56,14 @@ local shaders = {
 
 local material = {
 
-    customMaterial = function(shader, uniforms)
+    newCustomMaterial = function(shader, uniforms)
         return {
             shader = shader,
             uniforms = uniforms
         };
     end,
 
-    unlitColor = function(color)
+    newUnlitColor = function(color)
         return {
             shader = shaders.unlitColor,
             uniforms = {
@@ -72,14 +72,14 @@ local material = {
         };
     end,
 
-    debugNormals = function()
+    newDebugNormals = function()
         return {
             shader = shaders.debugNormals,
             uniforms = {}
         }
     end,
 
-    debugTexCoords = function()
+    newDebugTexCoords = function()
         return {
             shader = shaders.debugTexCoords,
             uniforms = {}

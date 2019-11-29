@@ -44,7 +44,7 @@ renderEntity = function(entity, vp)
     --Setup MVP matrix
     local mat = entity.material;
     mvp:copy(vp);
-    mvp:mult(entity.transform);
+    mvp:mul(entity.transform);
 
     love.graphics.setShader(mat.shader);
 
@@ -97,7 +97,7 @@ x3r.render = function(camera, scene, canvas3D, options)
   local view = camera.view;
 
   viewProjection:copy(projection);
-  viewProjection:mult(view);
+  viewProjection:mul(view);
 
   renderEntity(scene, viewProjection);
 

@@ -45,7 +45,7 @@ vec3.__index = {
         a.z = a.z - b.z;
     end,
 
-    mult = function(a, b)
+    mul = function(a, b)
         a.x = a.x * b.x;
         a.y = a.y * b.y;
         a.z = a.z * b.z;
@@ -171,6 +171,16 @@ quat.__index = {
         q.x, q.y, q.z, q.w = 0, 0, 0, 1;
     end,
 
+    mul = function(q, r)
+        local qx, qy, qz, qw = q:components();
+        local rx, ry, rz, rw = r:components();
+
+        q.x = qx * rw + qw * rx + qy * rz - qz * ry
+        q.y = qy * rw + qw * ry + qz * rx - qx * rz
+        q.z = qz * rw + qw * rz + qx * ry - qy * rx
+        q.w = qw * rw - qx * rx - qy * ry - qz * rz
+    end,
+
     copy = function(a, b)
         a.x = b.x;
         a.y = b.y;
@@ -186,6 +196,11 @@ quat.__index = {
         q.y = axis.y * s;
         q.z = axis.z * s;
         q.w = math.cos(halfAngle);
+    end,
+
+    rotateAxisAngle = function(q, axis, angle)
+        qtmp:setAxisAngle(axis, angle);
+        q:mul(qtmp);
     end,
 
     dot = function(a, b)
@@ -235,6 +250,10 @@ quat.__index = {
             q:add(qtmp);
             q:scale(s3);
         end
+    end,
+
+    components = function(q)
+        return q.x, q.y, q.z, q.w;
     end,
 
     __tostring = function(a)
@@ -332,7 +351,7 @@ mat4.__index = {
     end,
 
     -- b : mat4
-    mult = function(m, b)
+    mul = function(m, b)
 
         local a = m4tmp[3];
         a:copy(m);
@@ -462,8 +481,8 @@ mat4.__index = {
         m4tmp[1]:setRotate(rotation);
         m4tmp[2]:setScale(scale);
 
-        m:mult(m4tmp[1]);
-        m:mult(m4tmp[2]);
+        m:mul(m4tmp[1]);
+        m:mul(m4tmp[2]);
     end,
 
     __tostring = function(m)
