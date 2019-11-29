@@ -2,6 +2,15 @@
 
 local x3 = require('x3');
 
+CASTLE_PREFETCH({
+    "x3math.lua",
+    "x3render.lua",
+    "x3scene.lua",
+    "x3mesh.lua",
+    "x3material.lua",
+    "loaders/x3obj.lua"
+});
+
 local scene = x3.newEntity();
 local camera = x3.newCamera();
 local canvas3D;
@@ -60,7 +69,7 @@ love.load = function()
         x3.material.newDebugNormals()
     );
     scene:add(model);
-    model.position:set(0.0, 1.0, 0.0)
+    model.position:set(-2.0, 1.0, 0.0)
 
 end
 

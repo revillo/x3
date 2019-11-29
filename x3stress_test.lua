@@ -1,5 +1,13 @@
 --file://c:/castle/x3/x3stress_test.lua
 
+CASTLE_PREFETCH({
+    "x3math.lua",
+    "x3render.lua",
+    "x3scene.lua",
+    "x3mesh.lua",
+    "x3material.lua",
+    "loaders/x3obj.lua"
+});
 
 local lastTick = love.timer.getTime();
 
@@ -90,7 +98,7 @@ love.draw = function()
 
     love.graphics.setColor(0,0,0,0.5);
     love.graphics.rectangle("fill", 0, 0, 250, 150);
-    
+
     love.graphics.setColor(1,1,1,1);
     love.graphics.print("fps:"..math.floor(fps), 0, 0);
 

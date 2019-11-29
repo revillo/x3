@@ -1,23 +1,21 @@
 local x3 = {};
 
-local extend = function(file)
-    local module = require(file);
+local extend = function(module)
     for k, v in pairs(module) do
         x3[k] = v;
     end
 end
 
-local namespace = function(name, file)
-    local module = require(file);
+local namespace = function(name, module)
     x3[name] = module;
 end
 
-extend("x3math");
-extend("x3render");
-extend("x3scene");
-extend("loaders/x3obj")
+extend(require("x3math"));
+extend(require("x3render"));
+extend(require("x3scene"));
+extend(require("loaders/x3obj"));
 
-namespace("mesh", "x3mesh");
-namespace("material", "x3material");
+namespace("mesh", require("x3mesh"));
+namespace("material", require("x3material"));
 
 return x3;
