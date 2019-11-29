@@ -3,13 +3,16 @@
 
 local lastTick = love.timer.getTime();
 
+local tickMsgs = {};
+
 local tick = function(msg)
     local now = love.timer.getTime();
-    print(msg, ""..math.floor((now - lastTick) * 1000).."ms");
+    tickMsgs[msg] = math.floor((now - lastTick) * 1000);
+    print(msg, ""..tickMsgs[msg].."ms");
     lastTick = now;
 end;
 
-tick("Starting...")
+tick("Starting ")
 
 local models = {};
 local modelCount = 1000;
@@ -84,5 +87,17 @@ love.draw = function()
     local w, h = love.graphics.getDimensions();
     x3.render(camera, scene, canvas3D);
     love.graphics.draw(canvas3D.color, 0, h, 0, 1, -1);
+
+    love.graphics.setColor(0,0,0,0.5);
+    love.graphics.rectangle("fill", 0, 0, 250, 150);
+    
+    love.graphics.setColor(1,1,1,1);
     love.graphics.print("fps:"..math.floor(fps), 0, 0);
+
+    love.graphics.setColor(1, 0.5, 0.5, 1.0);
+    local i = 1;
+    for msg, ms in pairs(tickMsgs) do
+        love.graphics.print(msg.." : "..ms.."ms", 0, i * 20);
+        i = i + 1;
+    end
 end
