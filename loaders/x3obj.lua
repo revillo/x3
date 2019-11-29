@@ -29,17 +29,99 @@ local push = function(array, elem)
     array[array.size] = elem;
 end
 
-local loadObj = function(uri)
+local nilOr = function(value, default)
+    if (value == nil) then return default else return value end;
+end
+
+local loadObj = function(uri, opts)
+
+    local opts = opts or {};
+    opts.swapVertexOrder = nilOr(opts.swapVertexOrder, true); 
 
     local positions = newArray();
     local normals = newArray();
     local uvs = newArray();
-
     local indices = newArray();
+
+    local meshByName = {};
+    local meshName = "";
+    
+    local createMesh = function(name)
+
+        local verts = newArray();
+        local defaultUV = {0,0};
+        local defaultNormal = {0,1,0};
+
+        local function addVert(is)            
+            local p = positions[is[1]];  
+
+            local uv = uvs[is[2]] or defaultUV;
+            local n = normals[is[3]] or defaultNormal;
+            push(verts, {p[1], p[2], p[3], n[1], n[2], n[3], uv[1], uv[2]});
+        end
+    
+        local loadTriangle, loadQuad;
+        
+        if (opts.swapVertexOrder) then
+            loadTriangle = function(face)
+                addVert(face[1]);
+                addVert(face[3]);
+                addVert(face[2]);
+            end
+        else
+            loadTriangle = function(face)
+                addVert(face[1]);
+                addVert(face[2]);
+                addVert(face[3]);
+            end
+        end
+    
+        if (opts.swapVertexOrder) then
+            loadQuad = function(face)
+                addVert(face[1]);
+                addVert(face[3]);
+                addVert(face[2]);
+    
+                addVert(face[1]);
+                addVert(face[4]);
+                addVert(face[3]);
+            end
+    
+        else
+            loadQuad = function(face)
+                addVert(face[1]);
+                addVert(face[2]);
+                addVert(face[3]);
+    
+                addVert(face[1]);
+                addVert(face[3]);
+                addVert(face[4]);
+            end
+        end
+    
+        for f = 1,indices.size do
+            local face = indices[f];
+            if (face[4]) then
+                loadQuad(face);
+            else
+                loadTriangle(face);
+            end
+        end
+    
+        local mesh = love.graphics.newMesh(
+            x3mesh.BASIC_ATTRIBUTES, verts, "triangles", "static"
+        );
+
+        meshByName[name] = mesh;
+        
+        indices = newArray();
+    end
+
 
     local parseLine = function(line)
 
         local first = true;
+        local nameLine = false;
         local array;
         local entry;
         local entryI = 0;
@@ -62,7 +144,9 @@ local loadObj = function(uri)
                     array = indices;
                     first = false;
                 elseif (each == "o") then
-                    return;
+                    nameLine = true;
+                    first = false;
+                    array = {size = 0};
                 elseif (each == "s") then
                     return;
                 end
@@ -73,14 +157,19 @@ local loadObj = function(uri)
                 end
             else
 
+                --New mesh name or first mesh name
+                if (nameLine) then
+                    if (positions.size > 0) then
+                        createMesh(meshName);
+                    end
+
+                    meshName = each;
+                    return;
+                end
+
                 if (array == indices) then
-                    --push(entry, splitSlash(each));
                     entryI = entryI + 1;
                     entry[entryI] = splitSlash(each);
-
-                    if (entryI > 3) then
-                        error("Please triangulate .OBJ model faces.")
-                    end
                 else
                     entryI = entryI + 1;
                     entry[entryI] = tonumber(each);
@@ -89,52 +178,28 @@ local loadObj = function(uri)
         end
     end
 
-
-
     -- Works over network on castle
     for line in love.filesystem.lines(uri) do
         parseLine(line);
     end
-    --[[
-    print("np", positions.size);
 
-    for i = 1,  do
-        print (i);
-        for k, v in ipairs(positions[i]) do
-            print(k, v);
-        end
-    end
-    l]]
+    --Create the last mesh
+    createMesh(meshName);
 
-    local verts = newArray();
-
-
-    local defaultUV = {0,0};
-    local defaultNormal = {0,1,0};
-
-    for f = 1,indices.size do
-        local face = indices[f];
-        for v = 1, 3 do
-            local is = face[v];
-            local p = positions[is[1]];
-            
-            local uv = uvs[is[2]] or defaultUV;
-            local n = normals[is[3]] or defaultNormal;
-            push(verts, {p[1], p[2], p[3], n[1], n[2], n[3], uv[1], uv[2]});
-        end
-    end
-
-    local mesh = love.graphics.newMesh(
-        x3mesh.BASIC_ATTRIBUTES, verts, "triangles", "static"
-    );
 
     return {
-        mesh = mesh
+        --All meshes
+        meshesByName = meshByName,
+        
+        --Last mesh
+        mesh = meshByName[meshName]
     };
 
 end
 
 
-return loadObj;
+return {
+    loadObj = loadObj
+}
 
 

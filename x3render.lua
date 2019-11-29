@@ -6,7 +6,7 @@ local quat = x3m.quat;
 
 local x3r = {};
 
-x3r.createCanvas3D = function(...)
+x3r.newCanvas3D = function(...)
 
   local colorCanvas = love.graphics.newCanvas(...);
 
@@ -68,6 +68,8 @@ x3r.render = function(camera, scene, canvas3D, options)
 
   options = options or {};
   
+  options.cullMode = options.cullMode or "back";
+
   if(options.clear == nil) then
     options.clear = true;
   end
@@ -78,9 +80,9 @@ x3r.render = function(camera, scene, canvas3D, options)
     {canvas3D.color},
     depth = true,
     stencil = true
-});
+  });
 
-  love.graphics.setMeshCullMode("none");
+  love.graphics.setMeshCullMode(options.cullMode);
   
   --Todo fix depth buffer
   love.graphics.setDepthMode("lequal", true);

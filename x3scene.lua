@@ -147,7 +147,7 @@ scene.new = function()
 end
 
 return {
-    camera = camera.new,
-    scene = scene.new,
-    entity = entity.new
+    newCamera = camera.new,
+    newScene = scene.new,
+    newEntity = entity.new
 }
