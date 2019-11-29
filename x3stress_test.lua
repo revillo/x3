@@ -1,5 +1,16 @@
 --file://c:/castle/x3/x3stress_test.lua
 
+
+local lastTick = love.timer.getTime();
+
+local tick = function(msg)
+    local now = love.timer.getTime();
+    print(msg, ""..math.floor((now - lastTick) * 1000).."ms");
+    lastTick = now;
+end;
+
+tick("Starting...")
+
 local models = {};
 local modelCount = 1000;
 
@@ -20,15 +31,22 @@ love.resize = function()
     resizeCamera();
 end
 
+
 love.load = function()
+
+    tick("Love.load called");
+
     resizeCamera();
 
     camera.position:set(0, 0, 0);
     camera.target:set(0, 0, 1);
     camera.up:set(0,1,0);
 
+
     local monkeyMesh = x3.loadObj("models/monkey.obj").meshesByName["Suzanne"];
     local material = x3.material.newDebugNormals();
+
+    tick("Mesh Loaded")
 
     for i = 1, modelCount do
         models[i] = x3.newEntity(
@@ -40,6 +58,8 @@ love.load = function()
 
         scene:add(models[i]);
     end
+
+    tick("Scene Initialized");
 
 end
 

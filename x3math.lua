@@ -4,6 +4,7 @@
 
 local vec3 = {};
 local v3tmp = {};
+local qtmp;
 
 vec3.__index = {
 
@@ -122,6 +123,22 @@ vec3.__index = {
         v.z = m[2] * x + m[6] * y + m[10] * z + m[14] * w;
     end,
 
+    applyQuat = function(v, q)
+        local u, c = v3tmp[1], v3tmp[2];
+        u.x, u.y, u.z = q.x, q.y, q.z;
+
+        c:setCross(u, v);
+        local uu = u:lengthsq();
+        local uv = u:dot(v);
+        
+        v:scale(q.w * q.w - uu)
+        u:scale(2 * uv)
+        c:scale(2 * q.w)
+
+        v:add(u);
+        v:add(c);
+    end,
+
     components = function(v)
         return v.x, v.y, v.z;
     end,
@@ -155,8 +172,6 @@ local RIGHT = vec3.new(1, 0, 0);
 
 local quat = {};
 
-local qtmp;
-
 quat.__index = {
 
     clone = function(q)
@@ -169,6 +184,10 @@ quat.__index = {
 
     setIdentity = function(q)
         q.x, q.y, q.z, q.w = 0, 0, 0, 1;
+    end,
+
+    reset = function(q)
+        q:setIdentity();
     end,
 
     mul = function(q, r)
@@ -188,7 +207,8 @@ quat.__index = {
         a.w = b.w;
     end,
 
-    -- axis : vec3, angle : number
+    -- Sets quaternion to be axis/angle rotation
+    -- axis : vec3, angle : radians
     setAxisAngle = function(q, axis, angle)
         local halfAngle = angle * 0.5;
         local s = math.sin(halfAngle);
@@ -198,6 +218,8 @@ quat.__index = {
         q.w = math.cos(halfAngle);
     end,
 
+    -- Rotate this quaternion by axis/angle
+    -- axis : vec3, angle : radians
     rotateAxisAngle = function(q, axis, angle)
         qtmp:setAxisAngle(axis, angle);
         q:mul(qtmp);
