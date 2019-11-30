@@ -375,13 +375,10 @@ mat4.__index = {
     -- b : mat4
     mul = function(m, b)
 
-        local a = m4tmp[3];
-        a:copy(m);
-
-        local a11, a12, a13, a14 = a[0], a[4], a[8], a[12];
-        local a21, a22, a23, a24 = a[1], a[5], a[9], a[13];
-        local a31, a32, a33, a34 = a[2], a[6], a[10], a[14];
-        local a41, a42, a43, a44 = a[3], a[7], a[11], a[15];
+        local a11, a12, a13, a14 = m[0], m[4], m[8], m[12];
+        local a21, a22, a23, a24 = m[1], m[5], m[9], m[13];
+        local a31, a32, a33, a34 = m[2], m[6], m[10], m[14];
+        local a41, a42, a43, a44 = m[3], m[7], m[11], m[15];
 
         local b11, b12, b13, b14 = b[0], b[4], b[8], b[12];
         local b21, b22, b23, b24 = b[1], b[5], b[9], b[13];
@@ -499,12 +496,33 @@ mat4.__index = {
     end,
 
     compose = function(m, position, rotation, scale)
+        
+        --[[
         m:setTranslate(position);
         m4tmp[1]:setRotate(rotation);
         m4tmp[2]:setScale(scale);
 
         m:mul(m4tmp[1]);
         m:mul(m4tmp[2]);
+        ]]
+        
+        m:setRotate(rotation);
+
+        m[0] = m[0] * scale.x;
+        m[1] = m[1] * scale.x;
+        m[2] = m[2] * scale.x;
+
+        m[4] = m[4] * scale.y;
+        m[5] = m[5] * scale.y;
+        m[6] = m[6] * scale.y;
+
+        m[8] = m[8] * scale.z;
+        m[9] = m[9] * scale.z;
+        m[10] = m[10] * scale.z;
+
+        m[12] = position.x; 
+        m[13] = position.y; 
+        m[14] = position.z; 
     end,
 
     toRowMajorArray = function(m, a)

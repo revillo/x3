@@ -90,6 +90,7 @@ end
 
 local FORWARD = x3.vec3(0,0,1);
 local fps = 1/60;
+local dynamic = true;
 
 function castle.uiupdate()
     
@@ -97,18 +98,23 @@ function castle.uiupdate()
 
     if (newCount ~= modelCount) then
         setModelCount(newCount);
+        dynamic = true;
     end
+
+    dynamic = castle.ui.toggle("Static", "Dynamic", dynamic);
 
 end
 
 love.update = function(dt)   
 
-    local t = love.timer.getTime();
+    if (dynamic) then
+        local t = love.timer.getTime();
 
-    for i = 1,modelCount do
-        local theta = t * 0.1 + i * 0.1;
-        models[i].position:set(math.sin(theta), math.cos(theta), i / 100.0 + 1);
-        models[i].rotation:rotateAxisAngle(FORWARD, dt);
+        for i = 1,modelCount do
+            local theta = t * 0.1 + i * 0.1;
+            models[i].position:set(math.sin(theta), math.cos(theta), i / 100.0 + 1);
+            models[i].rotation:rotateAxisAngle(FORWARD, dt);
+        end
     end
 
     fps = fps * 0.9 + (1/dt) * 0.1;

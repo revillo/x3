@@ -9,6 +9,8 @@ CASTLE_PREFETCH({
     "loaders/x3obj.lua"
 });
 
+
+
 local lastTick = love.timer.getTime();
 
 local tickMsgs = {};
@@ -26,6 +28,14 @@ local models = {};
 local modelCount = 0;
 
 local x3 = require('x3');
+
+
+local tv3 = x3.vec3();
+local tq = x3.quat();
+local tm4 = x3.mat4();
+local SCALE = x3.vec3(0.1, 0.1, 0.1);
+local FORWARD = x3.vec3(0,0,1);
+
 
 local scene = x3.newEntity();
 local camera = x3.newCamera();
@@ -50,6 +60,7 @@ local instanceTemps;
 local transforms = {};
 
 local setModelCount = function(count)
+    local t = love.timer.getTime();
 
 
     --[[
@@ -85,11 +96,19 @@ local setModelCount = function(count)
     --local pos = x3.vec3();
 
     for i = 1, modelCount do
-        local t = i * 0.2;
         --pos:set(math.sin(t), math.cos(t), t);
         local mat = x3.mat4();
         --mat:setTranslate(pos);
         transforms[i] = mat;
+    end
+
+    for i = 1,modelCount do
+        local theta = t * 0.1 + i * 0.1;
+        --models[i].position:set(math.sin(theta), math.cos(theta), i / 100.0 + 1);
+        --models[i].rotation:rotateAxisAngle(FORWARD, dt);
+        tv3:set(math.sin(theta), math.cos(theta), i / 100.0 + 1);
+        tq:setAxisAngle(FORWARD, t);
+        transforms[i]:compose(tv3, tq, SCALE);
     end
 
     instanceMesh, instanceTemps = x3.mesh.newInstanceMesh(transforms);
@@ -127,8 +146,8 @@ love.load = function()
 end
 
 
-local FORWARD = x3.vec3(0,0,1);
 local fps = 1/60;
+local dynamic = true;
 
 function castle.uiupdate()
     
@@ -138,29 +157,30 @@ function castle.uiupdate()
         setModelCount(newCount);
     end
 
+    dynamic = castle.ui.toggle("Static", "Dynamic", dynamic);
+
+
 end
 
 
-local tv3 = x3.vec3();
-local tq = x3.quat();
-local tm4 = x3.mat4();
-local SCALE = x3.vec3(0.1);
-
 love.update = function(dt)   
 
-    local t = love.timer.getTime();
+    if (dynamic) then
 
-    for i = 1,modelCount do
-        local theta = t * 0.1 + i * 0.1;
-        --models[i].position:set(math.sin(theta), math.cos(theta), i / 100.0 + 1);
-        --models[i].rotation:rotateAxisAngle(FORWARD, dt);
-        tv3:set(math.sin(theta), math.cos(theta), i / 100.0 + 1);
-        tq:setAxisAngle(FORWARD, t);
-        transforms[i]:compose(tv3, tq, SCALE);
+        local t = love.timer.getTime();
+
+        for i = 1,modelCount do
+            local theta = t * 0.1 + i * 0.1;
+            --models[i].position:set(math.sin(theta), math.cos(theta), i / 100.0 + 1);
+            --models[i].rotation:rotateAxisAngle(FORWARD, dt);
+            tv3:set(math.sin(theta), math.cos(theta), i / 100.0 + 1);
+            tq:setAxisAngle(FORWARD, t);
+            transforms[i]:compose(tv3, tq, SCALE);
+        end
+        
+
+        x3.mesh.updateInstanceMesh(transforms, instanceMesh, instanceTemps);
     end
-
-    x3.mesh.updateInstanceMesh(transforms, instanceMesh, instanceTemps);
-
     fps = fps * 0.9 + (1/dt) * 0.1;
     
 end
