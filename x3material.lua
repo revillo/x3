@@ -27,8 +27,6 @@ local shaderSource = {
     ]],
 
     instanceVertex = [[
-        #pragma language glsl3
-
         //attribute vec4 InstancePosition;
         
         attribute vec4 InstanceTransform1;
@@ -56,7 +54,6 @@ local shaderSource = {
     ]],
 
     debugNormalsFragInstanced = [[
-        #pragma language glsl3
         varying vec3 normal;
 
         vec4 effect( vec4 color, Image texture, vec2 texture_coords, vec2 screen_coords )
