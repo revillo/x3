@@ -1,10 +1,10 @@
-POSITION_ATTRIBUTE = {"VertexPosition", "float", 3};
-NORMAL_ATTRIBUTE = {"VertexNormal", "float", 3};
-UV_ATTRIBUTE = {"VertexTexCoord", "float", 2};
+local POSITION_ATTRIBUTE = {"VertexPosition", "float", 3};
+local NORMAL_ATTRIBUTE = {"VertexNormal", "float", 3};
+local UV_ATTRIBUTE = {"VertexTexCoord", "float", 2};
 
 --COLOR_ATTRIBUTE = {"VertexColor", "float", 4};
 
-BASIC_ATTRIBUTES = {
+local BASIC_ATTRIBUTES = {
   POSITION_ATTRIBUTE,
   NORMAL_ATTRIBUTE,
   UV_ATTRIBUTE

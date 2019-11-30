@@ -23,6 +23,23 @@ local nodeMeta = {
         end
         
         child.parent = n;
+        return n;
+    end,
+
+    remove = function(n, child)
+        child.parent = nil;
+        n.children[child.uuid] = nil;
+        return n;
+    end,
+
+    removeFromParent = function(n)
+        if (n.parent) then
+            n.parent:remove(n);
+        end
+    end,
+
+    addToParent = function(n, parent)
+        parent:add(n);
     end,
 
     eachChild = function(n, callback, ...)

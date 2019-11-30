@@ -194,10 +194,10 @@ quat.__index = {
         local qx, qy, qz, qw = q:components();
         local rx, ry, rz, rw = r:components();
 
-        q.x = qx * rw + qw * rx + qy * rz - qz * ry
-        q.y = qy * rw + qw * ry + qz * rx - qx * rz
-        q.z = qz * rw + qw * rz + qx * ry - qy * rx
-        q.w = qw * rw - qx * rx - qy * ry - qz * rz
+        q.x = qx * rw + qw * rx + qy * rz - qz * ry;
+        q.y = qy * rw + qw * ry + qz * rx - qx * rz;
+        q.z = qz * rw + qw * rz + qx * ry - qy * rx;
+        q.w = qw * rw - qx * rx - qy * ry - qz * rz;
     end,
 
     copy = function(a, b)

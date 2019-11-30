@@ -23,7 +23,7 @@ end;
 tick("Starting ")
 
 local models = {};
-local modelCount = 1000;
+local modelCount = 0;
 
 local x3 = require('x3');
 
@@ -43,6 +43,32 @@ love.resize = function()
 end
 
 
+local modelMesh = x3.loadObj("models/monkey.obj").meshesByName["Suzanne"];
+local modelMaterial = x3.material.newDebugNormals();
+
+local setModelCount = function(count)
+    
+    for i = 1, modelCount do
+        if (models[i]) then
+            scene:remove(models[i]);
+        end
+    end
+
+    modelCount = count;
+
+    for i = 1, modelCount do
+        if (not models[i]) then
+            models[i] =  x3.newEntity(
+                modelMesh,
+                modelMaterial
+            );
+            models[i].scale:set(0.1, 0.1, 0.1);
+        end
+        
+        scene:add(models[i]);
+    end
+end
+
 love.load = function()
 
     tick("Love.load called");
@@ -54,31 +80,31 @@ love.load = function()
     camera.up:set(0,1,0);
 
 
-    local monkeyMesh = x3.loadObj("models/monkey.obj").meshesByName["Suzanne"];
-    local material = x3.material.newDebugNormals();
-
     tick("Mesh Loaded")
 
-    for i = 1, modelCount do
-        models[i] = x3.newEntity(
-            monkeyMesh,
-            material
-        );
-
-        models[i].scale:set(0.1, 0.1, 0.1);
-
-        scene:add(models[i]);
-    end
+    setModelCount(1000);
 
     tick("Scene Initialized");
 
 end
 
+
 local FORWARD = x3.vec3(0,0,1);
 local fps = 1/60;
 
-love.update = function(dt)   
+function castle.uiupdate()
     
+    local newCount = castle.ui.slider("Count", modelCount, 1, 10000);
+
+    if (newCount ~= modelCount) then
+        setModelCount(newCount);
+    end
+
+end
+
+love.update = function(dt)   
+
+
     local t = love.timer.getTime();
 
     for i = 1,modelCount do
