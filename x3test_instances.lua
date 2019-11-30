@@ -1,4 +1,4 @@
---file://c:/castle/x3/x3stress_test.lua
+--file://c:/castle/x3/x3test_instances.lua
 
 CASTLE_PREFETCH({
     "x3math.lua",
@@ -43,10 +43,16 @@ love.resize = function()
 end
 
 local modelMesh = x3.loadObj("models/monkey.obj").meshesByName["Suzanne"];
-local modelMaterial = x3.material.newDebugNormals();
+local modelMaterial = x3.material.newDebugNormalsInstanced(0);
+local entity;
+local instanceMesh = {};
+local instanceTemps;
+local transforms = {};
 
 local setModelCount = function(count)
-    
+
+
+    --[[
     for i = 1, modelCount do
         if (models[i]) then
             scene:remove(models[i]);
@@ -65,7 +71,40 @@ local setModelCount = function(count)
         end
         
         scene:add(models[i]);
+    end]]
+
+    if (entity) then
+        scene:remove(entity);
     end
+
+    modelCount = count;
+
+    modelMaterial = x3.material.newDebugNormalsInstanced(modelCount);
+
+    transforms = {};
+    --local pos = x3.vec3();
+
+    for i = 1, modelCount do
+        local t = i * 0.2;
+        --pos:set(math.sin(t), math.cos(t), t);
+        local mat = x3.mat4();
+        --mat:setTranslate(pos);
+        transforms[i] = mat;
+    end
+
+    instanceMesh, instanceTemps = x3.mesh.newInstanceMesh(transforms);
+
+    modelMesh:attachAttribute("InstanceTransform1", instanceMesh, "perinstance");
+    modelMesh:attachAttribute("InstanceTransform2", instanceMesh, "perinstance");
+    modelMesh:attachAttribute("InstanceTransform3", instanceMesh, "perinstance");
+    modelMesh:attachAttribute("InstanceTransform4", instanceMesh, "perinstance");
+
+    entity = x3.newEntity(
+        modelMesh,
+        modelMaterial
+    );
+
+    scene:add(entity);
 end
 
 love.load = function()
@@ -101,15 +140,26 @@ function castle.uiupdate()
 
 end
 
+
+local tv3 = x3.vec3();
+local tq = x3.quat();
+local tm4 = x3.mat4();
+local SCALE = x3.vec3(0.1);
+
 love.update = function(dt)   
 
     local t = love.timer.getTime();
 
     for i = 1,modelCount do
         local theta = t * 0.1 + i * 0.1;
-        models[i].position:set(math.sin(theta), math.cos(theta), i / 100.0 + 1);
-        models[i].rotation:rotateAxisAngle(FORWARD, dt);
+        --models[i].position:set(math.sin(theta), math.cos(theta), i / 100.0 + 1);
+        --models[i].rotation:rotateAxisAngle(FORWARD, dt);
+        tv3:set(math.sin(theta), math.cos(theta), i / 100.0 + 1);
+        tq:setAxisAngle(FORWARD, t);
+        transforms[i]:compose(tv3, tq, SCALE);
     end
+
+    x3.mesh.updateInstanceMesh(transforms, instanceMesh, instanceTemps);
 
     fps = fps * 0.9 + (1/dt) * 0.1;
     
@@ -133,4 +183,7 @@ love.draw = function()
         love.graphics.print(msg.." : "..ms.."ms", 0, i * 20);
         i = i + 1;
     end
+
+    love.graphics.print("Instances : "..modelCount, 0, i * 20);
+
 end

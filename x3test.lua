@@ -64,10 +64,34 @@ love.load = function()
     cube.position:set(1.5, 0.5, 0.0)
     scene:add(cube);
 
+    local mesh = x3.loadObj("models/monkey.obj").mesh;
+
+    --[[
+    local transforms = {};
+    local pos = x3.vec3();
+
+    for i = 1, 1000 do
+        local t = i * 0.2;
+        pos:set(math.sin(t), math.cos(t), t);
+        local mat = x3.mat4();
+        mat:setTranslate(pos);
+        transforms[i] = mat;
+    end
+  
+    local instanceMesh = x3.mesh.newInstanceMesh(transforms);
+
+    mesh:attachAttribute("InstanceTransform1", instanceMesh, "perinstance");
+    mesh:attachAttribute("InstanceTransform2", instanceMesh, "perinstance");
+    mesh:attachAttribute("InstanceTransform3", instanceMesh, "perinstance");
+    mesh:attachAttribute("InstanceTransform4", instanceMesh, "perinstance");
+]]
+
     model = x3.newEntity(
-        x3.loadObj("models/monkey.obj").mesh,
+        mesh,
         x3.material.newDebugNormals()
+        --x3.material.newDebugNormalsInstanced(1000)
     );
+
     scene:add(model);
     model.position:set(-2.0, 1.0, 0.0)
 

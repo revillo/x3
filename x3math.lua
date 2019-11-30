@@ -507,6 +507,19 @@ mat4.__index = {
         m:mul(m4tmp[2]);
     end,
 
+    toRowMajorArray = function(m, a)
+        a[1], a[2], a[3], a[4] = m[0], m[4], m[8], m[12];
+        a[5], a[6], a[7], a[8] = m[1], m[5], m[9], m[13];
+        a[9], a[10], a[11], a[12] = m[2], m[6], m[10], m[14];
+        a[13], a[14], a[15], a[16] = m[3], m[7], m[11], m[15];
+    end,
+
+    toColMajorArray = function(m, a)
+        for i = 1,16 do
+            a[i] = m[i-1];
+        end
+    end,
+
     __tostring = function(m)
         local list = {"\n",m[0], m[4], m[8], m[12], 
             "\n",  m[1], m[5], m[9], m[13],

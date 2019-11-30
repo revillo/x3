@@ -10,6 +10,18 @@ local BASIC_ATTRIBUTES = {
   UV_ATTRIBUTE
 }
 
+local TRANSFORM_ATTRIBUTES = {
+    {"InstanceTransform1", "float", 4},
+    {"InstanceTransform2", "float", 4},
+    {"InstanceTransform3", "float", 4},
+    {"InstanceTransform4", "float", 4}
+}
+
+--[[
+local TRANSFORM_ATTRIBUTES = {
+    {"InstancePosition", "float", 4}
+}]]
+
 local x3m = require('x3math');
 local vec3 = x3m.vec3;
 
@@ -215,10 +227,36 @@ local mesh = {
             end    
         end
         
-         return love.graphics.newMesh(
+        return love.graphics.newMesh(
             BASIC_ATTRIBUTES, verts, "triangles", "static"
-          );
-      end,
+        );
+    end,
+
+    newInstanceMesh = function(transforms)
+
+        local vs = {};
+
+        for i, t in ipairs(transforms) do
+            vs[i] = {};
+            t:toColMajorArray(vs[i]);
+        end
+
+        return love.graphics.newMesh(
+            TRANSFORM_ATTRIBUTES, vs
+        ), vs;
+
+    end,
+
+    updateInstanceMesh = function(transforms, mesh, vs)
+        vs = vs or {};
+
+        for i, t in ipairs(transforms) do
+            vs[i] = vs[i] or {};
+            t:toColMajorArray(vs[i]);
+        end
+
+        mesh:setVertices(vs);
+    end,
 
     BASIC_ATTRIBUTES = BASIC_ATTRIBUTES
 }

@@ -18,16 +18,13 @@ x3r.newCanvas3D = function(...)
 
 end
 
+local shaderMatArray = {};
 local function sendShaderMatrix(shader, name, m)
-  if (shader:hasUniform(name)) then
-    
+  if (shader:hasUniform(name)) then    
+    m:toRowMajorArray(shaderMatArray);
+
     --switch to row major
-    shader:send(name, {
-      m[0], m[4], m[8], m[12],
-      m[1], m[5], m[9], m[13],
-      m[2], m[6], m[10], m[14],
-      m[3], m[7], m[11], m[15]
-    });
+    shader:send(name, shaderMatArray);
   end
 end
 
@@ -43,21 +40,38 @@ renderEntity = function(entity, vp)
   if (entity.mesh and entity.material) then
     --Setup MVP matrix
     local mat = entity.material;
+    
     mvp:copy(vp);
     mvp:mul(entity.transform);
 
     love.graphics.setShader(mat.shader);
 
     --Send uniforms
-    for name, val in pairs(mat.uniforms) do
+    for name, val in pairs(mat.uniforms or {}) do
       if (mat.shader:hasUniform(name)) then
         mat.shader:send(name, val)
       end
     end
 
+    --Send Array uniforms
+    for name, val in pairs(mat.arrayUniforms or {}) do
+      if (mat.shader:hasUniform(name)) then
+        mat.shader:send(name, unpack(val));
+      end
+    end
+
     sendShaderMatrix(mat.shader, "mvp", mvp);
+    sendShaderMatrix(mat.shader, "vp", vp);
+    
     --draw
-    love.graphics.draw(entity.mesh);
+    --love.graphics.draw(entity.mesh);
+
+    if (mat.numInstances) then
+      love.graphics.drawInstanced(entity.mesh, mat.numInstances);
+    else
+      love.graphics.draw(entity.mesh);
+    end
+
   end
 
   entity:eachChild(renderEntity, vp);
