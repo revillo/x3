@@ -1,3 +1,5 @@
+local epsi = 0.00001;
+
 ------------
 --- vec3 ---
 ------------
@@ -18,6 +20,12 @@ vec3.__index = {
 
     copy = function(a, b)
         a.x, a.y, a.z = b.x, b.y, b.z;
+    end,
+
+    equals = function(a, b)
+        v3tmp:copy(a);
+        v3tmp:sub(b);
+        return v3tmp:lengthsq() < epsi;
     end,
 
     fromArray = function(v, a)
@@ -207,6 +215,12 @@ quat.__index = {
         a.w = b.w;
     end,
 
+    equals = function(a, b)
+        qtmp:copy(a);
+        qtmp:sub(b);
+        return qtmp:lengthsq() < epsi;
+    end,
+
     -- Sets quaternion to be axis/angle rotation
     -- axis : vec3, angle : radians
     setAxisAngle = function(q, axis, angle)
@@ -229,6 +243,18 @@ quat.__index = {
         return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
     end,
 
+    lengthsq = function(q)
+        return q:dot(q);
+    end,
+
+    length = function(q)
+        return math.sqrt(q:lengthsq());
+    end,
+
+    normalize = function(q)
+        return q:scale(1/q:length());
+    end,
+
     scale = function(q, s)
         q.x = q.x * s;
         q.y = q.y * s;
@@ -245,6 +271,13 @@ quat.__index = {
         a.y = a.y + b.y;
         a.z = a.z + b.z;
         a.w = a.w + b.w;
+    end,
+
+    sub = function(a, b)
+        a.x = a.x - b.x;
+        a.y = a.y - b.y;
+        a.z = a.z - b.z;
+        a.w = a.w - b.w;
     end,
 
     slerp = function(q, a, b, t)
@@ -337,12 +370,18 @@ mat4.__index = {
         end
     end,
 
-    -- v : vec3
-    setTranslate = function(m, v)
+    -- setTranslate(vec3) or setTranslate(x,y,z)
+    setTranslate = function(m, v, y, z)
         m:setIdentity();
-        m[12] = v.x;
-        m[13] = v.y;
-        m[14] = v.z;
+        if (y) then
+            m[12] = v;
+            m[13] = y;
+            m[14] = z;
+        else
+            m[12] = v.x;
+            m[13] = v.y;
+            m[14] = v.z;
+        end
     end,
 
     -- v : vec3

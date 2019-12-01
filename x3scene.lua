@@ -1,8 +1,11 @@
 local x3m = require('x3math');
+
 local vec3 = x3m.vec3;
 local quat = x3m.quat;
 local mat4 = x3m.mat4;
 
+
+local x3mesh = require("x3mesh");
 
 local extend = function(meta, props)
     for n, f in pairs(props) do
@@ -132,6 +135,72 @@ local entity = {};
 
 entity.__index = {
 
+    setNumInstances = function(e, numInstances)
+
+        if (not e.mesh) then
+            error("Cannot instance entity without mesh.")
+        end
+
+        e.numInstances = numInstances;
+        local transforms = {};
+        
+        for i = 1,e.numInstances do
+            transforms[i] = mat4();
+        end
+
+        e.instanceMesh, e.instanceData = x3mesh.newInstanceMesh(transforms);
+        e.instanceTransforms = transforms;
+        e.instancesDirty = false;
+
+    end,
+
+    setInstanceTransform = function(e, instanceIndex, transform)
+        e.instancesDirty = true;
+        e.instanceTransforms[instanceIndex]:copy(transform);
+    end,
+
+    updateInstances = function(e)
+        x3mesh.updateInstanceMesh(e.instanceTransforms, e.instanceMesh, e.instanceData);
+    end,
+
+    render = function(e, vp)
+        
+        e:updateTransform();
+
+        if (not e.mesh) then
+            return;
+        end
+
+        --todo
+        if (e.numInstances == 0) then
+            e:setNumInstances(1);
+        end
+
+        if (e.instancesDirty) then
+            e:updateInstances();
+            e.instancesDirty = false;
+        end
+
+        local shader = e.material.shader;
+
+        --shader:setActive();
+
+        local modelMesh = e.mesh;
+        local instanceMesh = e.instanceMesh;
+
+        --todo world transform
+        shader:sendMat4("u_Model", e.transform);
+        --shader:sendMatrix("u_ViewProjection", vp);
+
+        modelMesh:attachAttribute("InstanceTransform1", instanceMesh, "perinstance");
+        modelMesh:attachAttribute("InstanceTransform2", instanceMesh, "perinstance");
+        modelMesh:attachAttribute("InstanceTransform3", instanceMesh, "perinstance");
+        modelMesh:attachAttribute("InstanceTransform4", instanceMesh, "perinstance");
+
+        love.graphics.drawInstanced(modelMesh, e.numInstances);
+    end
+
+
 }
 
 extend(entity.__index, nodeMeta);
@@ -139,11 +208,13 @@ extend(entity.__index, nodeMeta);
 entity.new = function(mesh, material)
     local e = {
         mesh = mesh,
-        material = material
+        material = material,
+        numInstances = 0
     };
 
     initNode(e);
     setmetatable(e, entity);
+
     return e;
 end
 

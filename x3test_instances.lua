@@ -9,8 +9,6 @@ CASTLE_PREFETCH({
     "loaders/x3obj.lua"
 });
 
-
-
 local lastTick = love.timer.getTime();
 
 local tickMsgs = {};

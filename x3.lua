@@ -14,8 +14,8 @@ extend(require("x3math"));
 extend(require("x3render"));
 extend(require("x3scene"));
 extend(require("loaders/x3obj"));
+extend(require("x3material"));
 
 namespace("mesh", require("x3mesh"));
-namespace("material", require("x3material"));
 
 return x3;

@@ -241,9 +241,11 @@ local mesh = {
             t:toColMajorArray(vs[i]);
         end
 
-        return love.graphics.newMesh(
+        local instanceMesh = love.graphics.newMesh(
             TRANSFORM_ATTRIBUTES, vs
         ), vs;
+
+        return instanceMesh;
 
     end,
 
