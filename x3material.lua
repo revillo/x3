@@ -10,12 +10,10 @@ local shaderBank = {
     ]],
 
     com_varying = [[
-        
         varying vec3 v_WorldNormal;
         varying vec3 v_WorldPosition;
         varying vec2 v_TexCoord0;
         varying vec2 v_TexCoord1;
-        
     ]],
 
     vert_init = [[
@@ -49,15 +47,48 @@ local shaderBank = {
     ]],
 
     frag_init = [[
-        //int numPointLights;
-        //vec3 pointLightPositions[4];
-        //vec3 pointLightColors[4];
-        //float pointLightIntensities
+
+        #if LIGHTS
+            extern int u_NumPointLights;
+            extern vec3 u_PointLightPositions[4];
+            extern vec3 u_PointLightColors[4];
+            extern float u_PointLightIntensities[4];
+        #endif
+
+        extern vec3 u_DiffuseColor;
+        extern bool u_UseDiffuseTexture;
+        extern Image u_DiffuseTexture;
     ]],
 
     frag_shadeFragment = [[
         vec4 shadeFragment() {
-            return vec4(v_WorldNormal, 1.0);
+
+            vec3 diffuseColor = u_DiffuseColor;
+            
+            if (u_UseDiffuseTexture) {
+                diffuseColor = Texel(u_DiffuseTexture, v_TexCoord0).rgb;
+            }
+
+            vec4 outColor = vec4(0,0,0,1);
+
+
+        #if LIGHTS
+
+            //Diffuse Lighting
+            for (int i = 0; i < u_NumPointLights; i++) {
+                vec3 toLight = u_PointLightPositions[i] - v_WorldPosition;
+                float distance = length(toLight);
+                float cosFactor = dot(v_WorldNormal, toLight/distance);
+                float atten = clamp(1.0/(distance), 0.0, 1.0);
+                float intensity = cosFactor * u_PointLightIntensities[i] * atten;
+                outColor.rgb += diffuseColor * u_PointLightColors[i] * intensity;
+            } 
+
+            return outColor;
+        #else
+            outColor.rgb = diffuseColor;
+            return outColor;
+        #endif
         }
     ]],
 
@@ -154,6 +185,7 @@ local ShaderBuilder = {
 
         local defines = shaderBank.makeDefines({
             INSTANCES = 1,
+            LIGHTS = 1
         });
 
         local result = {
@@ -170,7 +202,13 @@ local ShaderBuilder = {
 
     buildStandardFragment = function()
 
+        local defines = shaderBank.makeDefines({
+            INSTANCES = 1,
+            LIGHTS = 1
+        });
+
         local result = {
+            defines,
             shaderBank.com_varying,
             shaderBank.frag_init,
             shaderBank.frag_shadeFragment,
@@ -281,9 +319,15 @@ local material = {
         }
     end,
 
-    newLitMesh = function()
+    newLitMesh = function(options)
+        local uniforms = {
+            --u_DiffuseColor = options.diffuseColor or {1,1,1},
+            u_DiffuseColor = {1,1,1},
+            u_UseDiffuseTexture = false
+        }
         return {
-            shader = standardShader
+            shader = standardShader,
+            uniforms = uniforms
         }
     end
 

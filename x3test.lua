@@ -19,7 +19,7 @@ local resizeCamera = function()
     local w, h = love.graphics.getDimensions();
     local aspect = h/w;
 
-    camera:setPerspective(90, h/w, 0.5, 10.0);
+    camera:setPerspective(90, h/w, 0.5, 100.0);
     canvas3D = x3.newCanvas3D(w, h);
 
     --[[
@@ -66,23 +66,32 @@ love.load = function()
     scene:add(cube);
     ]]
 
+    scene:add(x3.newPointLight({
+        position = x3.vec3(0, 5, 0),
+        intensity = 10,
+        color = {0.9, 0.0, 0.5}
+    }));
+
     local mesh = x3.loadObj("models/monkey.obj").mesh;
 
     model = x3.newEntity(
         mesh,
-        x3.material.newLitMesh()
+
+        x3.material.newLitMesh({
+            diffuseColor = {1,0,1}
+        })
         --x3.material.newDebugNormalsInstanced(1000)
     );
 
     scene:add(model);
     model.position:set(0.0, 0.0, 0.0)
 
-    model:setNumInstances(100);
+    model:setNumInstances(5);
 
     local mat = x3.mat4();
 
-    for i = 1,100 do
-        local t = i * 0.1;
+    for i = 1,5 do
+        local t = i;
         mat:setTranslate(math.sin(t), math.cos(t), t)
         model:setInstanceTransform(i, mat);
     end

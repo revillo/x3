@@ -55,10 +55,25 @@ local nodeMeta = {
 
 local nodeUUID = 0;
 
-local initNode = function(n)
+local initNode = function(n, props)
+
+    props = props or {};
+
     n.position = vec3(0);
-    n.rotation = quat();
+    if (props.position) then
+        n.position:copy(props.position)
+    end
+
+    n.rotation = quat();  
+    if (props.rotation) then
+        n.rotation:copy(props.rotation)
+    end
+
     n.scale = vec3(1);
+    if (props.scale) then
+        n.scale:copy(props.scale)
+    end
+
     n.transform = mat4();
     n.worldTransform = mat4();
     nodeUUID = nodeUUID + 1;
@@ -163,7 +178,7 @@ entity.__index = {
         x3mesh.updateInstanceMesh(e.instanceTransforms, e.instanceMesh, e.instanceData);
     end,
 
-    render = function(e, vp)
+    render = function(e)
         
         e:updateTransform();
 
@@ -191,6 +206,11 @@ entity.__index = {
         --todo world transform
         shader:sendMat4("u_Model", e.transform);
         --shader:sendMatrix("u_ViewProjection", vp);
+
+        --todo move
+        for name, val in pairs(e.material.uniforms) do
+            shader:send(name, val);
+        end
 
         modelMesh:attachAttribute("InstanceTransform1", instanceMesh, "perinstance");
         modelMesh:attachAttribute("InstanceTransform2", instanceMesh, "perinstance");
@@ -234,8 +254,32 @@ scene.new = function()
     return s;
 end
 
+local light = {}
+
+light.__index = {
+
+}
+
+extend(light.__index, nodeMeta);
+
+local function newPointLight(props)
+    local l = {};
+
+    l.intensity = props.intensity or 1;
+    l.color = props.color or {1,1,1};
+    l.type = "Point";
+    l.isLight = true;
+
+    initNode(l, props);
+    setmetatable(l, light);
+    return l;
+end
+
+
 return {
     newCamera = camera.new,
     newScene = scene.new,
-    newEntity = entity.new
+    newEntity = entity.new,
+    newPointLight = newPointLight
 }
+

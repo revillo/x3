@@ -32,20 +32,30 @@ renderEntity = function(entity, vp)
 
 end
 
-binEntity = function(entity, eByShader, renderIndex)
+binEntity = function(entity, bins, renderIndex)
 
   if (entity.mesh and entity.material) then
     local x3shader = entity.material.shader;
-    local bin = eByShader[x3shader] or {entities = {}, renderIndex = 0, size = 0}; 
+    local bin = bins.shaders[x3shader] or {entities = {}, renderIndex = 0, size = 0}; 
 
     bin.renderIndex = renderIndex;
     bin.size = bin.size + 1;
     bin.entities[bin.size] = entity;
 
-    eByShader[x3shader] = bin;
+    bins.shaders[x3shader] = bin;
   end
 
-  entity:eachChild(binEntity, eByShader, renderIndex);
+  if (entity.isLight) then
+    local bin = bins.lights[entity.type];-- or {entities = {}, renderIndex = 0, size = 0};
+
+    bin.renderIndex = renderIndex;
+    bin.size = bin.size + 1;
+    bin.entities[bin.size] = entity;
+
+    bins.lights[entity.type] = bin;
+  end
+
+  entity:eachChild(binEntity, bins, renderIndex);
 
 end
 
@@ -54,22 +64,64 @@ local renderIndex = 0;
 
 local binsForScene = {};
 
-x3r.render = function(camera, scene, canvas3D, options)
+local resetBins = function(scene)
 
-  options = options or {};  
+  binsForScene[scene] = binsForScene[scene] or {
+    shaders = {},
+    lights = {
+      Point = {entities = {}, renderIndex = 0, size = 0}
+    };
+  };
+
+  local bins = binsForScene[scene];
+
+  for _, bin in pairs(bins.shaders) do
+    bin.size = 0;
+  end
   
-  binsForScene[scene] = binsForScene[scene] or {};
-
-  for _, bin in pairs(binsForScene[scene]) do
+  for _, bin in pairs(bins.lights) do
     bin.size = 0;
   end
 
+  return bins;
+
+end
+
+local sendLights = function(shader, lightBins)
+  local pointLights = lightBins.Point;
+
+  local positions = {};
+  local intensities = {};
+  local colors = {};
+
+  for i = 1, pointLights.size do
+    local entity = pointLights.entities[i];
+    positions[i] = {entity.position:components()};
+    intensities[i] = entity.intensity;
+    colors[i] = entity.color;
+  end
+
+  if (pointLights.size > 0) then
+    shader:sendArray("u_PointLightPositions", positions);
+    shader:sendArray("u_PointLightIntensities", intensities);
+    shader:sendArray("u_PointLightColors", colors);
+  end
+
+  shader:send("u_NumPointLights", pointLights.size);
+
+end
+
+x3r.render = function(camera, scene, canvas3D, options)
   renderIndex = renderIndex + 1;
 
   if (renderIndex == 100000) then
     renderIndex = 0;
     binsForScene = {};
   end
+
+  options = options or {};  
+ 
+  local bins = resetBins(scene);
 
   options.cullMode = options.cullMode or "back";
 
@@ -98,12 +150,16 @@ x3r.render = function(camera, scene, canvas3D, options)
   viewProjection:copy(camera.projection);
   viewProjection:mul(camera.view);
 
-  binEntity(scene, binsForScene[scene], renderIndex);
+  binEntity(scene, bins, renderIndex);
 
-  for x3Shader, bin in pairs(binsForScene[scene]) do
+  for x3Shader, bin in pairs(bins.shaders) do
     if (bin.renderIndex == renderIndex) then
+
       x3Shader:sendMat4("u_ViewProjection", viewProjection);
       x3Shader:setActive();
+      
+      sendLights(x3Shader, bins.lights);
+
       local entities = bin.entities;
       for i = 1,bin.size do
         renderEntity(entities[i]);
