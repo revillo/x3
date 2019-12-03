@@ -307,6 +307,45 @@ quat.__index = {
         end
     end,
 
+    --Extracts rotation from mat4
+    --https://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/
+    fromMat4 = function(q, m)
+
+        local m00, m01, m02 = m[0], m[4], m[8];
+        local m10, m11, m12 = m[1], m[5], m[9];
+        local m20, m21, m22 = m[2], m[6], m[10];
+
+        local tr = m00 + m11 + m22
+
+        if (tr > 0) then
+            local S = math.sqrt(tr+1.0) * 2;  
+            q.w = 0.25 * S;
+            q.x = (m21 - m12) / S;
+            q.y = (m02 - m20) / S; 
+            q.z = (m10 - m01) / S; 
+        elseif ((m00 > m11) and (m00 > m22)) then
+            local S = math.sqrt(1.0 + m00 - m11 - m22) * 2;
+            q.w = (m21 - m12) / S;
+            q.x = 0.25 * S;
+            q.y = (m01 + m10) / S; 
+            q.z = (m02 + m20) / S; 
+        elseif (m11 > m22) then 
+            local S = math.sqrt(1.0 + m11 - m00 - m22) * 2;
+            q.w = (m02 - m20) / S;
+            q.x = (m01 + m10) / S; 
+            q.y = 0.25 * S;
+            q.z = (m12 + m21) / S; 
+        else  
+            local S = math.sqrt(1.0 + m22 - m00 - m11) * 2;
+            q.w = (m10 - m01) / S;
+            q.x = (m02 + m20) / S;
+            q.y = (m12 + m21) / S;
+            q.z = 0.25 * S;
+        end
+
+        q:normalize();
+    end,
+
     components = function(q)
         return q.x, q.y, q.z, q.w;
     end,
@@ -545,19 +584,25 @@ mat4.__index = {
         m:mul(m4tmp[2]);
         ]]
         
-        m:setRotate(rotation);
+        if (rotation) then
+            m:setRotate(rotation);
+        else
+            m:setIdentity();
+        end
 
-        m[0] = m[0] * scale.x;
-        m[1] = m[1] * scale.x;
-        m[2] = m[2] * scale.x;
+        if (scale) then
+            m[0] = m[0] * scale.x;
+            m[1] = m[1] * scale.x;
+            m[2] = m[2] * scale.x;
 
-        m[4] = m[4] * scale.y;
-        m[5] = m[5] * scale.y;
-        m[6] = m[6] * scale.y;
+            m[4] = m[4] * scale.y;
+            m[5] = m[5] * scale.y;
+            m[6] = m[6] * scale.y;
 
-        m[8] = m[8] * scale.z;
-        m[9] = m[9] * scale.z;
-        m[10] = m[10] * scale.z;
+            m[8] = m[8] * scale.z;
+            m[9] = m[9] * scale.z;
+            m[10] = m[10] * scale.z;
+        end
 
         m[12] = position.x; 
         m[13] = position.y; 

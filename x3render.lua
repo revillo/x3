@@ -1,4 +1,6 @@
 local x3m = require('x3math');
+local x3s = require('x3scene');
+
 local vec3 = x3m.vec3;
 local mat4 = x3m.mat4;
 local quat = x3m.quat;
@@ -64,6 +66,7 @@ local renderIndex = 0;
 
 local binsForScene = {};
 
+
 local resetBins = function(scene)
 
   binsForScene[scene] = binsForScene[scene] or {
@@ -87,27 +90,46 @@ local resetBins = function(scene)
 
 end
 
-local sendLights = function(shader, lightBins)
-  local pointLights = lightBins.Point;
 
+local fillLightUniforms = function(lightBins)
   local positions = {};
   local intensities = {};
   local colors = {};
+  local pointLights = lightBins.Point;
 
   for i = 1, pointLights.size do
     local entity = pointLights.entities[i];
-    positions[i] = {entity.position:components()};
+    local wt = entity.worldTransform;
+    positions[i] = {wt[12], wt[13], wt[14]};
     intensities[i] = entity.intensity;
     colors[i] = entity.color;
   end
 
-  if (pointLights.size > 0) then
-    shader:sendArray("u_PointLightPositions", positions);
-    shader:sendArray("u_PointLightIntensities", intensities);
-    shader:sendArray("u_PointLightColors", colors);
+  return {
+    Point = {
+      positions = positions,
+      intensities = intensities,
+      colors = colors,
+      count = pointLights.size
+    }
+  };
+
+end
+
+--todo optimize
+local sendLights = function(shader, lights)
+  
+  if (shader.options.defines.LIGHTS ~= 1) then
+    return;
   end
 
-  shader:send("u_NumPointLights", pointLights.size);
+  if (lights.Point.count > 0) then
+    shader:sendArray("u_PointLightPositions", lights.Point.positions);
+    shader:sendArray("u_PointLightIntensities", lights.Point.intensities);
+    shader:sendArray("u_PointLightColors", lights.Point.colors);
+  end
+
+  shader:send("u_NumPointLights", lights.Point.count);
 
 end
 
@@ -146,11 +168,15 @@ x3r.render = function(camera, scene, canvas3D, options)
   love.graphics.clear(cc[1],cc[2],cc[3],cc[4], true, true);
   love.graphics.setColor(1,1,1,1);
   
+  x3s.updateWorldTransforms(scene);
+
   camera:updateView();
   viewProjection:copy(camera.projection);
   viewProjection:mul(camera.view);
 
   binEntity(scene, bins, renderIndex);
+
+  local lightUniforms = fillLightUniforms(bins.lights);
 
   for x3Shader, bin in pairs(bins.shaders) do
     if (bin.renderIndex == renderIndex) then
@@ -158,7 +184,7 @@ x3r.render = function(camera, scene, canvas3D, options)
       x3Shader:sendMat4("u_ViewProjection", viewProjection);
       x3Shader:setActive();
       
-      sendLights(x3Shader, bins.lights);
+      sendLights(x3Shader, lightUniforms);
 
       local entities = bin.entities;
       for i = 1,bin.size do

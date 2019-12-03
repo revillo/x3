@@ -21,6 +21,7 @@ local shaderBank = {
         extern mat4 u_Model;
 
         attribute vec3 VertexNormal;
+        //attribute vec2 VertexTexCoord2;
     ]],
     
     vert_initFragData = [[
@@ -34,7 +35,12 @@ local shaderBank = {
 
             vec4 worldPosition = model * vertexPosition;
             v_WorldPosition = worldPosition.xyz;
-            v_WorldNormal = (model * vec4(VertexNormal, 0.0)).xyz; 
+            v_WorldNormal = (model * vec4(VertexNormal, 0.0)).xyz;
+
+            v_TexCoord0 = VertexTexCoord.rg;
+            //v_TexCoord1 = VertexTexCoord2.rg;
+            
+            v_TexCoord0.y = 1.0 - v_TexCoord0.y;
             return u_ViewProjection * worldPosition;
         }
     ]],
@@ -55,40 +61,97 @@ local shaderBank = {
             extern float u_PointLightIntensities[4];
         #endif
 
-        extern vec3 u_DiffuseColor;
-        extern bool u_UseDiffuseTexture;
-        extern Image u_DiffuseTexture;
-    ]],
+        extern vec3 u_BaseColor;
+        extern bool u_UseBaseTexture;
+        extern Image u_BaseTexture;
 
-    frag_shadeFragment = [[
-        vec4 shadeFragment() {
+        extern vec3 u_EmissiveColor;
+        extern bool u_UseEmissiveTexture;
+        extern Image u_EmissiveTexture;
 
-            vec3 diffuseColor = u_DiffuseColor;
+        extern vec3 u_HemiLowColor;
+        extern vec3 u_HemiHighColor;
+
+        extern bool u_UseLightmap;
+        extern Image u_LightmapTexture;
+
+        vec3 getBaseColor() {
+            vec3 baseColor = u_BaseColor;
             
-            if (u_UseDiffuseTexture) {
-                diffuseColor = Texel(u_DiffuseTexture, v_TexCoord0).rgb;
+            if (u_UseBaseTexture) {
+                baseColor = Texel(u_BaseTexture, v_TexCoord0).rgb;
             }
 
-            vec4 outColor = vec4(0,0,0,1);
+            return baseColor;
+        }
 
+        vec3 getEmissiveColor() {
+            vec3 emissiveColor = u_EmissiveColor;
+            
+            if (u_UseEmissiveTexture) {
+                emissiveColor = Texel(u_EmissiveTexture, v_TexCoord0).rgb;
+            }
+
+            return emissiveColor;
+        }
+
+        vec3 getLightmapColor() {
+            vec3 lightmapColor = vec3(1.0);
+            
+            if (u_UseLightmap) {
+                lightmapColor = Texel(u_LightmapTexture, v_TexCoord0).rgb;
+            }
+
+            return lightmapColor;
+        }
+    ]],
+
+    frag_getDiffuseLighting = [[
+        vec3 getDiffuseLighting() {
+            vec3 diffuseLighting = vec3(0.0);
 
         #if LIGHTS
-
-            //Diffuse Lighting
+            //base Lighting
             for (int i = 0; i < u_NumPointLights; i++) {
                 vec3 toLight = u_PointLightPositions[i] - v_WorldPosition;
                 float distance = length(toLight);
-                float cosFactor = dot(v_WorldNormal, toLight/distance);
+                float cosFactor = max(0.0, dot(v_WorldNormal, toLight/distance));
                 float atten = clamp(1.0/(distance), 0.0, 1.0);
                 float intensity = cosFactor * u_PointLightIntensities[i] * atten;
-                outColor.rgb += diffuseColor * u_PointLightColors[i] * intensity;
+                diffuseLighting += u_PointLightColors[i] * intensity;
             } 
-
-            return outColor;
-        #else
-            outColor.rgb = diffuseColor;
-            return outColor;
         #endif
+
+            float skyDot = v_WorldNormal.y * 0.5 + 0.5;
+            diffuseLighting += mix( u_HemiLowColor, u_HemiHighColor, skyDot);
+        
+            diffuseLighting += (getLightmapColor() - vec3(1.0)) * 1.1;
+
+            return diffuseLighting;
+        }
+    ]],
+
+    frag_shadeFragmentBegin = [[
+        vec4 shadeFragment() {
+            vec4 outColor = vec4(0,0,0,1);
+    ]],
+
+    frag_shadeFragmentStandard = [[
+        vec3 baseColor = getBaseColor();
+        #if LIGHTS
+
+        #else
+            outColor.rgb = baseColor;
+        #endif
+
+        vec3 diffuseLighting = getDiffuseLighting();
+        outColor.rgb += baseColor * diffuseLighting; 
+
+        outColor.rgb += getEmissiveColor();
+    ]],
+
+    frag_shadeFragmentEnd = [[
+            return outColor;
         }
     ]],
 
@@ -108,82 +171,11 @@ local shaderBank = {
     end
 }
 
-local shaderSource = {
-
-    defaultVertex = [[
-        attribute vec3 VertexNormal;
-
-        extern mat4 mvp; 
-        //extern mat4 model;
-        
-        varying vec3 normal;
-        
-        vec4 position(mat4 transform_projection, vec4 vertex_position)
-        {
-            vec4 p = mvp * vec4(vertex_position.xyz, 1.0);
-            normal = VertexNormal;
-            return p;
-        }
-    ]],
-
-    instanceVertex = [[        
-        attribute vec4 InstanceTransform1;
-        attribute vec4 InstanceTransform2;
-        attribute vec4 InstanceTransform3;
-        attribute vec4 InstanceTransform4;
-        
-        attribute vec3 VertexNormal;
-
-        extern mat4 vp;
-        varying vec3 normal;
-        
-        vec4 position(mat4 transform_projection, vec4 vertex_position)
-        {
-            mat4 model = mat4(InstanceTransform1, InstanceTransform2, InstanceTransform3, InstanceTransform4);
-            vec4 p = vec4(vertex_position.xyz, 1.0);
-            normal = VertexNormal;
-
-            return vp * (model * p); 
-        }
-
-
-    ]],
-
-    debugNormalsFrag = [[
-        varying vec3 normal;
-
-        vec4 effect( vec4 color, Image texture, vec2 texture_coords, vec2 screen_coords )
-        {
-          return vec4(normal * 0.5 + vec3(0.5), 1.0);
-        }
-    ]],
-
-    debugTexCoords = [[
-        varying vec3 normal;
-
-        vec4 effect( vec4 color, Image texture, vec2 texture_coords, vec2 screen_coords )
-        {
-          return vec4(texture_coords, 0.0, 1.0);
-        }
-    ]],
-
-    unlitColorFrag = [[
-
-        extern vec4 unlitColor;
-
-        vec4 effect( vec4 color, Image texture, vec2 texture_coords, vec2 screen_coords )
-        {
-          return unlitColor;
-        }
-    
-    ]]
-}
-
 local ShaderBuilder = {
 
     buildStandardVertex = function(options)
 
-        local defines = shaderBank.makeDefines({
+        local defines = shaderBank.makeDefines(options.defines or {
             INSTANCES = 1,
             LIGHTS = 1
         });
@@ -200,9 +192,9 @@ local ShaderBuilder = {
         return table.concat(result);
     end,
 
-    buildStandardFragment = function()
+    buildStandardFragment = function(options)
 
-        local defines = shaderBank.makeDefines({
+        local defines = shaderBank.makeDefines(options.defines or {
             INSTANCES = 1,
             LIGHTS = 1
         });
@@ -211,7 +203,10 @@ local ShaderBuilder = {
             defines,
             shaderBank.com_varying,
             shaderBank.frag_init,
-            shaderBank.frag_shadeFragment,
+            shaderBank.frag_getDiffuseLighting,
+            shaderBank.frag_shadeFragmentBegin,
+            shaderBank.frag_shadeFragmentStandard,
+            shaderBank.frag_shadeFragmentEnd,
             shaderBank.frag_main
         };
 
@@ -223,12 +218,7 @@ local ShaderBuilder = {
 
 local makeShader = love.graphics.newShader;
 
-local shaders = {
-    unlitColor = makeShader(shaderSource.defaultVertex, shaderSource.unlitColorFrag),
-    debugNormals = makeShader(shaderSource.defaultVertex, shaderSource.debugNormalsFrag),
-    debugNormalsInstanced = makeShader(shaderSource.instanceVertex, shaderSource.debugNormalsFrag),
-    debugTexCoords = makeShader(shaderSource.defaultVertex, shaderSource.debugTexCoords)
-};
+
 
 local shader = {};
 
@@ -240,6 +230,8 @@ shader.__index = {
         local loveShader = s.loveShader;
         if (loveShader:hasUniform(name)) then
             loveShader:send(name, ...);
+        else
+            print(name);
         end
     end,
 
@@ -264,73 +256,99 @@ shader.__index = {
 }
 
 shader.newStandardShader = function(options)
+
+    options.defines = options.defines or {
+        INSTANCES = 1,
+        LIGHTS = 1
+    }
+
     local s = {
-        loveShader = makeShader(ShaderBuilder.buildStandardVertex(options), ShaderBuilder.buildStandardFragment(options));
-    } 
+        loveShader = makeShader(
+            ShaderBuilder.buildStandardVertex(options), 
+            ShaderBuilder.buildStandardFragment(options)
+        ),
+
+        options = options
+    };
 
     setmetatable(s, shader);
     return s;
 end
 
-local standardShader = shader.newStandardShader({});
+local Shaders = {
 
+    standardShader = shader.newStandardShader({
+        defines = {
+            INSTANCES = 1,
+            LIGHTS = 1
+        }
+    }),
+
+    unlitShader = shader.newStandardShader({
+        defines = {
+            INSTANCES = 1,
+            LIGHTS = 0
+        }
+    })
+}
 
 local material = {
 
-    newCustomMaterial = function(shader, uniforms)
-        return {
-            shader = shader,
-            uniforms = uniforms
-        };
-    end,
+    newLit = function(options)
+        options = options or {};
 
-    newUnlitColor = function(color)
-        return {
-            shader = shaders.unlitColor,
-            uniforms = {
-                unlitColor = color
-            }
-        };
-    end,
+        options.hemiColors = options.hemiColors or {{0,0,0}, {0,0,0}};
 
-    newDebugNormals = function()
-        return {
-            shader = shaders.debugNormals,
-            uniforms = {}
-        }
-    end,
-
-    newDebugNormalsInstanced = function(numInstances)
-        return {
-            shader = shaders.debugNormalsInstanced,
-
-            uniforms = {
-
-            },
-
-            numInstances = numInstances
-        }
-    end,
-
-    newDebugTexCoords = function()
-        return {
-            shader = shaders.debugTexCoords,
-            uniforms = {}
-        }
-    end,
-
-    newLitMesh = function(options)
         local uniforms = {
-            --u_DiffuseColor = options.diffuseColor or {1,1,1},
-            u_DiffuseColor = {1,1,1},
-            u_UseDiffuseTexture = false
-        }
-        return {
-            shader = standardShader,
-            uniforms = uniforms
-        }
-    end
 
+            u_BaseColor = options.baseColor or {1,1,1},
+            u_UseBaseTexture = not not options.baseTexture,
+            u_BaseTexture = options.baseTexture,
+
+            u_HemiLowColor = options.hemiColors[1] or {0,0,0},
+            u_HemiHighColor = options.hemiColors[2] or {0,0,0},
+
+            u_EmissiveColor = options.emissiveColor or {0,0,0},
+            u_UseEmissiveTexture = not not options.emissiveTexture,
+            u_EmissiveTexture = options.emissiveTexture,
+
+            u_LightmapTexture = options.lightmapTexture,
+            u_UseLightmap = not not options.lightmapTexture
+        }
+
+        return {
+            shader = Shaders.standardShader,
+            uniforms = uniforms,
+            options = options
+        }
+    end,
+
+    
+    newUnlit = function(options)
+        options = options or {};
+
+        options.hemiColors = options.hemiColors or {{0,0,0}, {0,0,0}};
+
+        local uniforms = {
+            u_BaseColor = options.baseColor or {1,1,1},
+            u_UseBaseTexture = not not options.baseTexture,
+            u_BaseTexture = options.baseTexture,
+
+            u_HemiLowColor = options.hemiColors[1] or {0,0,0},
+            u_HemiHighColor = options.hemiColors[2] or {0,0,0},
+
+            u_EmissiveColor = options.emissiveColor or {0,0,0},
+            u_UseEmissiveTexture = not not options.emissiveTexture,
+            u_EmissiveTexture = options.emissiveTexture,
+        }
+
+        return {
+            shader = Shaders.unlitShader,
+            uniforms = uniforms,
+            options = options or {}
+        }
+
+    end
 }
 
 return {

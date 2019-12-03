@@ -220,9 +220,9 @@ local mesh = {
         local verts = {};
         local index = 1;
         
-        for f = 1, 6 do
+        for face = 1, 6 do
             for v = 1, 6 do
-              verts[index] = faces[f][v]; 
+              verts[index] = faces[face][v]; 
               index = index + 1;
             end    
         end

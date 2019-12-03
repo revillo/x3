@@ -40,8 +40,9 @@ love.load = function()
     resizeCamera();
 
     camera.position:set(0, 0, 6);
-    camera.target:set(0,0,0);
-    camera.up:set(0,1,0);
+    
+    --camera.target:set(0,0,0);
+    --camera.up:set(0,1,0);
 
     --[[
     floor = x3.newEntity(
@@ -69,7 +70,7 @@ love.load = function()
     scene:add(x3.newPointLight({
         position = x3.vec3(0, 5, 0),
         intensity = 10,
-        color = {0.9, 0.0, 0.5}
+        color = {0.9, 0.9, 0.7}
     }));
 
     local mesh = x3.loadObj("models/monkey.obj").mesh;
@@ -88,21 +89,25 @@ love.load = function()
 
     model:setNumInstances(5);
 
-    local mat = x3.mat4();
+    local instancePosition = x3.vec3();
 
     for i = 1,5 do
         local t = i;
-        mat:setTranslate(math.sin(t), math.cos(t), t)
-        model:setInstanceTransform(i, mat);
+        instancePosition:set(math.sin(t), math.cos(t), t)
+        model:setInstance(i, instancePosition);
     end
 
 end
+
+local cameraTarget = x3.vec3(0,0,0);
+local cameraUp = x3.vec3(0,1,0);
 
 love.update = function()   
 
     local t = love.timer.getTime();
     camera.position:set(math.cos(t) * 5, 5, math.sin(t) * 5);
-    camera.target:set(0,0,0);
+    --camera.target:set(0,0,0);
+    camera:lookAt(cameraTarget, cameraUp);
     
 end
 
