@@ -125,7 +125,7 @@ local shaderBank = {
             float skyDot = v_WorldNormal.y * 0.5 + 0.5;
             diffuseLighting += mix( u_HemiLowColor, u_HemiHighColor, skyDot);
         
-            diffuseLighting += (getLightmapColor() - vec3(1.0)) * 1.1;
+            diffuseLighting += (getLightmapColor() - vec3(1.0));
 
             return diffuseLighting;
         }

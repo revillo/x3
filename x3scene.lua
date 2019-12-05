@@ -16,8 +16,23 @@ end
 local v3tmp = x3m.vec3();
 
 local transformMeta = {
+
     updateTransform = function(n)
         n.transform:compose(n.position, n.rotation, n.scale);
+    end,
+
+    markClean = function(n)
+        n.dirty = false;
+        if (n.parent) then
+            n.parent.dirtyChildren[n.uuid] = nil;
+        end
+    end,
+
+    markDirty = function(n)
+        n.dirty = true;
+        if (n.parent) then
+            n.parent.dirtyChildren[n.uuid] = n;
+        end
     end,
 
     getLocalXAxis = function(n, out)
@@ -73,18 +88,19 @@ local transformMeta = {
 
     rotateAxis = function(n, axis, angle)
         n.rotation:rotateAxisAngle(axis, angle);
+        n:markDirty();
     end,
 
     rotateLocalX = function(n, angle)
-        n.rotation:rotateAxisAngle(n:getLocalXAxis(), angle);
+        n:rotateAxis(n:getLocalXAxis(), angle);
     end,
 
     rotateLocalY = function(n, angle)
-        n.rotation:rotateAxisAngle(n:getLocalYAxis(), angle);
+        n:rotateAxis(n:getLocalYAxis(), angle);
     end,
 
     rotateLocalZ = function(n, angle)
-        n.rotation:rotateAxisAngle(n:getLocalZAxis(), angle);
+        n:rotateAxis(n:getLocalZAxis(), angle);
     end,
 
     setRotation = function(n, q, y, z, w)
@@ -93,6 +109,7 @@ local transformMeta = {
         else
             n.quat:copy(q);
         end
+        n:markDirty();
     end,
 
     setPosition = function(n, v, y, z)
@@ -101,11 +118,12 @@ local transformMeta = {
         else
             n.position:copy(v);
         end
+        n:markDirty();
     end,
 
     setScale = function(n, v, y, z)
         if (y) then
-            n.scales:set(v, y, z);
+            n.scale:set(v, y, z);
         else
             if (type(v) == "number") then
                 n.scale:set(v,v,v);
@@ -113,6 +131,7 @@ local transformMeta = {
                 n.scale:copy(v);
             end
         end
+        n:markDirty();
     end
 }
 
@@ -121,16 +140,21 @@ local nodeMeta = {
         n.children[child.uuid] = child;
         
         if (child.parent) then
-            child.parent.children[child.uuid] = nil;
+            child.parent:remove(child);
         end
         
         child.parent = n;
+
+        if (child.dirty) then
+            child:markDirty();
+        end
         return n;
     end,
 
     remove = function(n, child)
         child.parent = nil;
         n.children[child.uuid] = nil;
+        n.dirtyChildren[child.uuid] = nil;
         return n;
     end,
 
@@ -178,6 +202,10 @@ local initNode = function(n, props)
     nodeUUID = nodeUUID + 1;
     n.uuid = nodeUUID;
     n.children = {};
+    n.dirtyChildren = {};
+    n.dirty = true;
+
+    return n;
 end
 
 local camera = {};
@@ -239,7 +267,7 @@ camera.new = function()
     return c;
 end
 
---[[
+
 local instance = {};
 
 instance.__index = {
@@ -247,7 +275,7 @@ instance.__index = {
 };
 
 extend(instance.__index, transformMeta);
-]]
+
 
 local entity = {};
 
@@ -260,18 +288,34 @@ entity.__index = {
         end
 
         e.numInstances = numInstances;
-        local transforms = {};
+        local instances = {};
         
         for i = 1,e.numInstances do
-            transforms[i] = mat4();
+            instances[i] = {
+                position = x3m.vec3(),
+                rotation = x3m.quat(),
+                scale = x3m.vec3(),
+                transform = x3m.mat4(),
+                parent = e,
+                uuid = i
+            };
+            setmetatable(instances[i], instance);
         end
 
-        e.instanceMesh, e.instanceData = x3mesh.newInstanceMesh(transforms);
-        e.instanceTransforms = transforms;
-        e.instancesDirty = false;
+        e.instanceMesh, e.instanceData = x3mesh.newInstanceMesh(instances);
+        e.instances = instances;
 
     end,
 
+    getNumInstances = function(e)
+        return e.numInstances;
+    end,
+
+    getInstance = function(e, index)
+        return e.instances[index];
+    end,
+
+    --[[
     setInstanceTransform = function(e, instanceIndex, transform)
         e.instancesDirty = true;
         e.instanceTransforms[instanceIndex]:copy(transform);
@@ -281,9 +325,31 @@ entity.__index = {
         e.instancesDirty = true;
         e.instanceTransforms[instanceIndex]:compose(position, rotation, scale);
     end,
+    ]]
 
     updateInstances = function(e)
-        x3mesh.updateInstanceMesh(e.instanceTransforms, e.instanceMesh, e.instanceData);
+
+        if (e.numInstances == 0) then
+            return;
+        end
+
+        for i, n in pairs(e.dirtyChildren) do
+            n:updateTransform();
+            n:markClean();
+        end
+
+        x3mesh.updateInstanceMesh(e.instances, e.instanceMesh, e.instanceData);
+    end,
+
+    instancesNeedUpdate = function(e)
+
+        if (e.numInstances == 0) then
+            return false;
+        end
+
+        for k, v in pairs(e.dirtyChildren) do
+            return true;
+        end
     end,
 
     render = function(e)
@@ -299,9 +365,8 @@ entity.__index = {
             e:setNumInstances(1);
         end
 
-        if (e.instancesDirty) then
+        if (e:instancesNeedUpdate()) then
             e:updateInstances();
-            e.instancesDirty = false;
         end
 
         local shader = e.material.shader;
@@ -398,16 +463,24 @@ end
 local updateWorldTransforms;
 
 --Updates local and world transforms for all descendants
-function updateWorldTransforms(node)
-    node:updateTransform();
-    if (not node.parent) then
+function updateWorldTransforms(node, parentDirty)
+
+    local dirty = node.dirty;
+
+    if (dirty) then
+        node:updateTransform();
+    end
+
+    if (parentDirty == nil and dirty) then
         node.worldTransform:copy(node.transform);
-    else
+    elseif (parentDirty or dirty) then
         node.worldTransform:copy(node.parent.worldTransform);
         node.worldTransform:mul(node.transform);
     end
 
-    node:eachChild(updateWorldTransforms);
+    node:markClean();
+
+    node:eachChild(updateWorldTransforms, dirty or parentDirty);
 end
 
 return {

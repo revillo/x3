@@ -232,29 +232,29 @@ local mesh = {
         );
     end,
 
-    newInstanceMesh = function(transforms)
+    newInstanceMesh = function(instances)
 
         local vs = {};
 
-        for i, t in ipairs(transforms) do
+        for i, t in ipairs(instances) do
             vs[i] = {};
-            t:toColMajorArray(vs[i]);
+            t.transform:toColMajorArray(vs[i]);
         end
 
         local instanceMesh = love.graphics.newMesh(
             TRANSFORM_ATTRIBUTES, vs
-        ), vs;
+        );
 
-        return instanceMesh;
+        return instanceMesh, vs;
 
     end,
 
-    updateInstanceMesh = function(transforms, mesh, vs)
+    updateInstanceMesh = function(instances, mesh, vs)
         vs = vs or {};
 
-        for i, t in ipairs(transforms) do
+        for i, t in ipairs(instances) do
             vs[i] = vs[i] or {};
-            t:toColMajorArray(vs[i]);
+            t.transform:toColMajorArray(vs[i]);
         end
 
         mesh:setVertices(vs);
