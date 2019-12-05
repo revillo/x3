@@ -8,7 +8,13 @@ CASTLE_PREFETCH({
     "x3scene.lua",
     "x3mesh.lua",
     "x3material.lua",
-    "loaders/x3obj.lua"
+    "loaders/x3obj.lua",
+    "models/island/crownAO.png",
+    "models/island/islandAO.png",
+    "models/island/island.png",
+    "models/island/grass.obj",
+    "models/island/island.obj",
+    "models/island/sky.png"
 });
 
 local scene = x3.newEntity();
