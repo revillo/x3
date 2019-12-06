@@ -35,7 +35,7 @@ local shaderBank = {
 
             vec4 worldPosition = model * vertexPosition;
             v_WorldPosition = worldPosition.xyz;
-            v_WorldNormal = (model * vec4(VertexNormal, 0.0)).xyz;
+            v_WorldNormal = normalize((model * vec4(VertexNormal, 0.0))).xyz;
 
             v_TexCoord0 = VertexTexCoord.rg;
             //v_TexCoord1 = VertexTexCoord2.rg;
@@ -71,6 +71,7 @@ local shaderBank = {
 
         extern vec3 u_HemiLowColor;
         extern vec3 u_HemiHighColor;
+        extern vec3 u_HemiDirection;
 
         extern bool u_UseLightmap;
         extern Image u_LightmapTexture;
@@ -109,20 +110,21 @@ local shaderBank = {
     frag_getDiffuseLighting = [[
         vec3 getDiffuseLighting() {
             vec3 diffuseLighting = vec3(0.0);
+            vec3 normal = normalize(v_WorldNormal);
 
         #if LIGHTS
             //base Lighting
             for (int i = 0; i < u_NumPointLights; i++) {
                 vec3 toLight = u_PointLightPositions[i] - v_WorldPosition;
                 float distance = length(toLight);
-                float cosFactor = max(0.0, dot(v_WorldNormal, toLight/distance));
+                float cosFactor = max(0.0, dot(normal, toLight/distance));
                 float atten = clamp(1.0/(distance), 0.0, 1.0);
                 float intensity = cosFactor * u_PointLightIntensities[i] * atten;
                 diffuseLighting += u_PointLightColors[i] * intensity;
             } 
         #endif
 
-            float skyDot = v_WorldNormal.y * 0.5 + 0.5;
+            float skyDot = dot(normal, u_HemiDirection);
             diffuseLighting += mix( u_HemiLowColor, u_HemiHighColor, skyDot);
         
             diffuseLighting += (getLightmapColor() - vec3(1.0));
@@ -292,29 +294,36 @@ local Shaders = {
     })
 }
 
+local function materialDefaultUniforms(options)
+
+    options.hemiColors = options.hemiColors or {{0,0,0}, {0,0,0}};
+
+    return {
+        u_BaseColor = options.baseColor or {1,1,1},
+        u_UseBaseTexture = not not options.baseTexture,
+        u_BaseTexture = options.baseTexture,
+
+        u_HemiLowColor = options.hemiColors[1] or {0,0,0},
+        u_HemiHighColor = options.hemiColors[2] or {0,0,0},
+        u_HemiDirection = options.hemiDirection or {0, 1, 0},
+
+        u_EmissiveColor = options.emissiveColor or {0,0,0},
+        u_UseEmissiveTexture = not not options.emissiveTexture,
+        u_EmissiveTexture = options.emissiveTexture
+    }
+
+end
+
 local material = {
 
     newLit = function(options)
         options = options or {};
 
-        options.hemiColors = options.hemiColors or {{0,0,0}, {0,0,0}};
+        local uniforms = materialDefaultUniforms(options);
 
-        local uniforms = {
-
-            u_BaseColor = options.baseColor or {1,1,1},
-            u_UseBaseTexture = not not options.baseTexture,
-            u_BaseTexture = options.baseTexture,
-
-            u_HemiLowColor = options.hemiColors[1] or {0,0,0},
-            u_HemiHighColor = options.hemiColors[2] or {0,0,0},
-
-            u_EmissiveColor = options.emissiveColor or {0,0,0},
-            u_UseEmissiveTexture = not not options.emissiveTexture,
-            u_EmissiveTexture = options.emissiveTexture,
-
-            u_LightmapTexture = options.lightmapTexture,
-            u_UseLightmap = not not options.lightmapTexture
-        }
+        uniforms.u_LightmapTexture = options.lightmapTexture;
+        uniforms.u_UseLightmap = not not options.lightmapTexture;
+        
 
         return {
             shader = Shaders.standardShader,
@@ -327,20 +336,7 @@ local material = {
     newUnlit = function(options)
         options = options or {};
 
-        options.hemiColors = options.hemiColors or {{0,0,0}, {0,0,0}};
-
-        local uniforms = {
-            u_BaseColor = options.baseColor or {1,1,1},
-            u_UseBaseTexture = not not options.baseTexture,
-            u_BaseTexture = options.baseTexture,
-
-            u_HemiLowColor = options.hemiColors[1] or {0,0,0},
-            u_HemiHighColor = options.hemiColors[2] or {0,0,0},
-
-            u_EmissiveColor = options.emissiveColor or {0,0,0},
-            u_UseEmissiveTexture = not not options.emissiveTexture,
-            u_EmissiveTexture = options.emissiveTexture,
-        }
+        local uniforms = materialDefaultUniforms(options);
 
         return {
             shader = Shaders.unlitShader,

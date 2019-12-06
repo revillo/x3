@@ -208,6 +208,16 @@ quat.__index = {
         q.w = qw * rw - qx * rx - qy * ry - qz * rz;
     end,
 
+    postmul = function(q, r)
+        local qx, qy, qz, qw = r:components();
+        local rx, ry, rz, rw = q:components();
+
+        q.x = qx * rw + qw * rx + qy * rz - qz * ry;
+        q.y = qy * rw + qw * ry + qz * rx - qx * rz;
+        q.z = qz * rw + qw * rz + qx * ry - qy * rx;
+        q.w = qw * rw - qx * rx - qy * ry - qz * rz;
+    end,
+
     copy = function(a, b)
         a.x = b.x;
         a.y = b.y;
@@ -236,7 +246,8 @@ quat.__index = {
     -- axis : vec3, angle : radians
     rotateAxisAngle = function(q, axis, angle)
         qtmp:setAxisAngle(axis, angle);
-        q:mul(qtmp);
+        q:postmul(qtmp);
+        q:normalize();
     end,
 
     dot = function(a, b)

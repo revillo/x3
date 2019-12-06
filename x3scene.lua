@@ -91,6 +91,11 @@ local transformMeta = {
         n:markDirty();
     end,
 
+    resetRotation = function(n)
+        n.rotation:setIdentity();
+        n:markDirty();
+    end,
+
     rotateLocalX = function(n, angle)
         n:rotateAxis(n:getLocalXAxis(), angle);
     end,
@@ -119,6 +124,46 @@ local transformMeta = {
             n.position:copy(v);
         end
         n:markDirty();
+    end,
+
+    copyPosition = function(n, n2)
+        n:setPosition(n2:getPosition());
+    end,
+
+    copyRotation = function(n, n2)
+        n:setRotation(n2:getRotation());
+    end,
+
+    copyScale = function(n, n2)
+        n:setScale(n2:getScale());
+    end,
+
+    move = function(n, v, y, z)
+        if (y) then
+            v3tmp:set(v, y, z);
+            n.position:add(v3tmp);
+        else
+            n.position:add(v);
+        end
+        n:markDirty();
+    end,
+
+    moveLocalX = function(n, dist)
+        n:getLocalXAxis(v3tmp);
+        v3tmp:scale(dist);
+        n:move(v3tmp);
+    end,
+
+    moveLocalY = function(n, dist)
+        n:getLocalYAxis(v3tmp);
+        v3tmp:scale(dist);
+        n:move(v3tmp);
+    end,
+
+    moveLocalZ = function(n, dist)
+        n:getLocalZAxis(v3tmp);
+        v3tmp:scale(dist);
+        n:move(v3tmp);
     end,
 
     setScale = function(n, v, y, z)
@@ -294,7 +339,7 @@ entity.__index = {
             instances[i] = {
                 position = x3m.vec3(),
                 rotation = x3m.quat(),
-                scale = x3m.vec3(),
+                scale = x3m.vec3(1.0),
                 transform = x3m.mat4(),
                 parent = e,
                 uuid = i
@@ -339,6 +384,12 @@ entity.__index = {
         end
 
         x3mesh.updateInstanceMesh(e.instances, e.instanceMesh, e.instanceData);
+
+        for i = 1, e.numInstances do
+            --print(i);
+            --print(e.instances[i].transform:__tostring());
+        end
+
     end,
 
     instancesNeedUpdate = function(e)
@@ -414,7 +465,10 @@ entity.new = function(mesh, material)
         initNode(e);
     else
         e = {};
+        mesh =  mesh or {};
         initNode(e, mesh);
+        e.mesh = mesh.mesh;
+        e.material = mesh.material;
     end
 
     setmetatable(e, entity);
@@ -465,7 +519,7 @@ local updateWorldTransforms;
 --Updates local and world transforms for all descendants
 function updateWorldTransforms(node, parentDirty)
 
-    local dirty = node.dirty;
+    local dirty = not not node.dirty;
 
     if (dirty) then
         node:updateTransform();

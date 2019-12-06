@@ -103,16 +103,17 @@ love.load = function()
 
     local grass = x3.newEntity(
         x3.loadObj("models/island/grass.obj").mesh,
+        --x3.mesh.newBox(1, 1, 1),
         x3.material.newLit({
             baseColor = {0.3, 0.9, 0.6},
             emissiveColor = {0.07, 0.2, 0.0},
-            hemiColors = {{ 0.0, 0.0, 0.0}, {0.9, 0.9, 0.8}},
+            hemiColors = {{ 0.3, 0.3, 0.3}, {0.9, 0.9, 0.8}},
             cullMode = "none"
         })
     );
 
     scene:add(grass);
-    grass:setNumInstances(1000);
+    grass:setNumInstances(200);
 
     local grassPos = x3.vec3();
     local grassRot = x3.quat();
