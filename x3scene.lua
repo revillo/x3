@@ -332,6 +332,10 @@ entity.__index = {
             error("Cannot instance entity without mesh.")
         end
 
+        if (e.numInstances == numInstances) then
+            return;
+        end
+
         e.numInstances = numInstances;
         local instances = {};
         
