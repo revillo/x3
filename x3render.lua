@@ -116,7 +116,8 @@ local fillLightUniforms = function(lightBins)
 
 end
 
---todo optimize
+
+
 local sendLights = function(shader, lights)
   
   if (shader.options.defines.LIGHTS ~= 1) then
@@ -132,6 +133,8 @@ local sendLights = function(shader, lights)
   shader:send("u_NumPointLights", lights.Point.count);
 
 end
+
+local CamPos = {0,0,0};
 
 x3r.render = function(camera, scene, canvas3D, options)
   renderIndex = renderIndex + 1;
@@ -174,6 +177,8 @@ x3r.render = function(camera, scene, canvas3D, options)
   viewProjection:copy(camera.projection);
   viewProjection:mul(camera.view);
 
+  CamPos[1], CamPos[2], CamPos[3] = camera.transform[12], camera.transform[13], camera.transform[14];
+
   binEntity(scene, bins, renderIndex);
 
   local lightUniforms = fillLightUniforms(bins.lights);
@@ -181,8 +186,10 @@ x3r.render = function(camera, scene, canvas3D, options)
   for x3Shader, bin in pairs(bins.shaders) do
     if (bin.renderIndex == renderIndex) then
 
-      x3Shader:sendMat4("u_ViewProjection", viewProjection);
       x3Shader:setActive();
+      x3Shader:sendMat4("u_ViewProjection", viewProjection);
+      x3Shader:send("u_WorldCameraPosition", CamPos);
+
       
       sendLights(x3Shader, lightUniforms);
 

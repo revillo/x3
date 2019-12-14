@@ -22,10 +22,44 @@ vec3.__index = {
         a.x, a.y, a.z = b.x, b.y, b.z;
     end,
 
-    equals = function(a, b)
-        v3tmp:copy(a);
+    equals = function(a, b, y, z)
+        if (y) then
+            v3tmp:set(b,y,z);
+        else
+            v3tmp:copy(a);
+        end
         v3tmp:sub(b);
         return v3tmp:lengthsq() < epsi;
+    end,
+
+    invert = function(v)
+        v:scale(-1);
+    end,
+
+    deserialize = function(v, data)
+        v:fromArray(data);
+    end,
+
+    serialize = function(v, out)
+        out = out or {};
+        out[1], out[2], out[3] = v.x, v.y, v.z;
+        return out;
+    end,
+
+    --lo : vec3 (lower left corner), hi : vec3 (upper right corner)
+    randomCube = function(v, low, hi)
+        v.x = math.random();
+        v.y = math.random();
+        v.z = math.random();
+
+        if (not low) then
+            return;
+        end
+
+        v3tmp[1]:copy(hi);
+        v3tmp[1]:sub(low);
+        v:mul(v3tmp[1]);
+        v:add(low);
     end,
 
     fromArray = function(v, a)
@@ -48,6 +82,12 @@ vec3.__index = {
         a.z = a.z + b.z;
     end,
 
+    addScaled = function(a, b, t)
+        a.x = a.x + b.x * t;
+        a.y = a.y + b.y * t;
+        a.z = a.z + b.z * t;
+    end,
+
     sub = function(a, b)
         a.x = a.x - b.x;
         a.y = a.y - b.y;
@@ -62,6 +102,16 @@ vec3.__index = {
 
     dot = function(a, b)
         return a.x * b.x + a.y * b.y + a.z * b.z;
+    end,
+
+    lerp = function(v, b, t)
+        v:setLerp(v, b, t);
+    end,
+
+    setLerp = function(v, a, b, t)
+        v:copy(a);
+        v:scale(1-t);
+        v:addScaled(b, t);
     end,
 
     scale = function(a, s)
@@ -151,6 +201,10 @@ vec3.__index = {
         return v.x, v.y, v.z;
     end,
 
+    print = function(n)
+        print(n:__tostring());
+    end,
+
     __tostring = function(a)
         return "{"..a.x..","..a.y..","..a.z.."}";
     end
@@ -192,6 +246,20 @@ quat.__index = {
 
     setIdentity = function(q)
         q.x, q.y, q.z, q.w = 0, 0, 0, 1;
+    end,
+    
+    deserialize = function(q, data)
+        q:fromArray(data);
+    end,
+
+    fromArray = function(q, a)
+        q:set(a[1], a[2], a[3], a[4]);
+    end,
+
+    serialize = function(q, out)
+        out = out or {};
+        out[1], out[2], out[3], out[4] = q.x, q.y, q.z, q.w;
+        return out;
     end,
 
     reset = function(q)
@@ -291,7 +359,11 @@ quat.__index = {
         a.w = a.w - b.w;
     end,
 
-    slerp = function(q, a, b, t)
+    slerp = function(q, b, t)
+        q:setSlerp(q, b, t);
+    end,
+
+    setSlerp = function(q, a, b, t)
         qtmp:copy(b);
         q:copy(a);
 
@@ -659,8 +731,174 @@ for i = 1,3 do
     m4tmp[i] = mat4.new();
 end
 
+local ray = {};
+
+ray.__index = {
+    hitSphere = function(ray, sCenter, sRadius)
+
+        local s0r0 = v3tmp[1];
+        s0r0:copy(ray.origin);
+        s0r0:sub(sCenter);
+
+        local b = 2 * ray.direction:dot(s0r0);
+        local c = s0r0:lengthsq() - (sRadius * sRadius);
+        local det = b*b - 4*c;
+
+        if (det < 0) then
+            return nil, nil
+        end
+
+        local q = (-b - math.sqrt(det))/2;
+
+        local t0, t1 = q, c/q;
+
+        if (t1 < t0) then
+            t0, t1 = t1, t0;
+        end
+
+        if (t0 < 0 and t1 > 0) then return t1 end
+        if (t0 < 0 and t1 < 0) then return nil, nil end
+
+        return t0, t1;
+
+
+    end,
+
+    deserialize = function(r, data)
+        r.origin:deserialize(data.origin);
+        r.direction:deserialize(data.direction);
+    end,
+
+    serialize = function(r, out)
+        out = out or {};
+
+        out.origin = r.origin:serialize(out.origin);
+        out.direction = r.direction:serialize(out.direction);
+        return out;
+    end,
+
+    clone = function(r)
+        return ray.new(r.origin, r.direction)
+    end,
+
+    at = function(ray, t, out) 
+        out = out or v3tmp[1];
+        out:copy(ray.origin);
+        out:addScaled(ray.direction, t);
+        return out;
+    end
+}
+
+ray.new = function(origin, direction)
+
+    origin = origin or vec3.new(0.0);
+    direction = direction or vec3.new(0,0,1);
+
+    local r = {
+        origin = origin:clone(),
+        direction = direction:clone()
+    };
+    setmetatable(r, ray);
+    return r;
+end
+
+Collider = {};
+
+Collider.__index = {
+
+    -- id: any, center : vec3, radius : number, data : any
+    addSphere = function(c, id, center, radius, data)
+        
+
+        if (c.colliders[id]) then
+            local col = c.colliders[id];
+            col.type = "sphere";
+            col.center:copy(center);
+            col.radius = radius;
+            col.data = data or col.data;
+        else
+            local collider = {
+                type = "sphere",
+                center = center:clone(),
+                radius = radius,
+                id = id,
+                data = data
+            };
+
+            c.colliders[id] = collider;
+        end
+    end,
+
+    remove = function(c, id)
+        c.colliders[id] = nil;
+    end,
+
+    clear = function(c)
+        c.colliders = {};
+    end,
+
+    traceRay = function(c, ray)
+        local nearestDistance = 100000;
+        local nearestData;
+        local nearestId;
+
+        for uuid, col in pairs(c.colliders) do
+            local t0, t1 = ray:hitSphere(col.center, col.radius);
+
+            --print(uuid, col.center:__tostring(), col.radius);
+
+            if (t0 and t0 < nearestDistance) then
+                nearestDistance = t0;
+                nearestData = col.data;
+                nearestId = uuid;
+            end
+        end
+
+        if (nearestData) then
+            return nearestDistance, nearestId, nearestData;
+        end
+    end
+
+}
+
+function Collider.new()
+    
+    local c = {
+        colliders = {},
+        uuidCounter = 0
+    }
+
+    setmetatable(c, Collider);
+    return c;
+
+end
+
+
+local hexHelper = function(x)
+    return (math.floor(x) % 256);
+end
+
+local hexColor = function(hex)
+    if (type(hex) == "string") then
+        hex = hex:gsub("#","")
+        return {tonumber("0x"..hex:sub(1,2)), tonumber("0x"..hex:sub(3,4)), tonumber("0x"..hex:sub(5,6))}
+    end
+
+    --bitwise ops not supported in lua 5.1
+    if (type(hex) == "number") then
+        local b = hexHelper(hex);
+        local g = hexHelper((hex - b) / 256);
+        local r = hexHelper((hex - (g * 256 + b)) / (256*256));
+        return {r/255,g/255,b/255};
+    end
+end
+
+
 return {
     vec3 = vec3.new,
     quat = quat.new,
-    mat4 = mat4.new
+    mat4 = mat4.new,
+    ray = ray.new,
+    newCollider = Collider.new,__index,
+    hexColor = hexColor
 }

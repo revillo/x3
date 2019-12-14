@@ -6,6 +6,8 @@ local shaderBank = {
             attribute vec4 InstanceTransform2;
             attribute vec4 InstanceTransform3;
             attribute vec4 InstanceTransform4;
+
+            attribute vec4 InstanceColor;
         #endif
     ]],
 
@@ -14,6 +16,10 @@ local shaderBank = {
         varying vec3 v_WorldPosition;
         varying vec2 v_TexCoord0;
         varying vec2 v_TexCoord1;
+
+        #if INSTANCES
+            varying vec3 v_InstanceColor;
+        #endif
     ]],
 
     vert_init = [[
@@ -39,7 +45,11 @@ local shaderBank = {
 
             v_TexCoord0 = VertexTexCoord.rg;
             //v_TexCoord1 = VertexTexCoord2.rg;
-            
+
+            #if INSTANCES
+                v_InstanceColor = InstanceColor.rgb;
+            #endif
+
             v_TexCoord0.y = 1.0 - v_TexCoord0.y;
             return u_ViewProjection * worldPosition;
         }
@@ -54,12 +64,12 @@ local shaderBank = {
 
     frag_init = [[
 
-        #if LIGHTS
-            extern int u_NumPointLights;
-            extern vec3 u_PointLightPositions[4];
-            extern vec3 u_PointLightColors[4];
-            extern float u_PointLightIntensities[4];
-        #endif
+        struct FragLighting {
+            vec3 diffuseLighting;
+            vec3 specularLighting;
+        };
+
+        extern vec3 u_WorldCameraPosition;
 
         extern vec3 u_BaseColor;
         extern bool u_UseBaseTexture;
@@ -83,6 +93,10 @@ local shaderBank = {
                 baseColor = Texel(u_BaseTexture, v_TexCoord0).rgb;
             }
 
+            #if INSTANCES
+                baseColor.rgb *= v_InstanceColor.rgb;
+            #endif
+
             return baseColor;
         }
 
@@ -92,6 +106,10 @@ local shaderBank = {
             if (u_UseEmissiveTexture) {
                 emissiveColor = Texel(u_EmissiveTexture, v_TexCoord0).rgb;
             }
+
+            #if INSTANCES
+                emissiveColor.rgb *= v_InstanceColor.rgb;
+            #endif
 
             return emissiveColor;
         }
@@ -105,22 +123,55 @@ local shaderBank = {
 
             return lightmapColor;
         }
+
+        #if LIGHTS
+        extern int u_NumPointLights;
+        extern vec3 u_PointLightPositions[4];
+        extern vec3 u_PointLightColors[4];
+        extern float u_PointLightIntensities[4];
+
+        extern vec3 u_SpecularColor;
+        extern float u_Shininess;
+        extern bool u_UseSpecularTexture;
+        extern Image u_SpecularTexture;
+
+        vec3 getSpecularColor() {
+            vec3 color = u_SpecularColor;
+            
+            if (u_UseSpecularTexture) {
+                color = Texel(u_SpecularTexture, v_TexCoord0).rgb;
+            }
+
+            return color;
+        }
+        #endif
     ]],
 
-    frag_getDiffuseLighting = [[
-        vec3 getDiffuseLighting() {
+    frag_getLighting = [[
+
+
+        FragLighting getLighting() {
             vec3 diffuseLighting = vec3(0.0);
+            vec3 specularLighting = vec3(0.0);
             vec3 normal = normalize(v_WorldNormal);
 
         #if LIGHTS
+
+            vec3 eyeRay = normalize(v_WorldPosition - u_WorldCameraPosition);
+            vec3 outRay = reflect(eyeRay, normal);
+
             //base Lighting
             for (int i = 0; i < u_NumPointLights; i++) {
                 vec3 toLight = u_PointLightPositions[i] - v_WorldPosition;
                 float distance = length(toLight);
-                float cosFactor = max(0.0, dot(normal, toLight/distance));
-                float atten = clamp(1.0/(distance), 0.0, 1.0);
-                float intensity = cosFactor * u_PointLightIntensities[i] * atten;
+                toLight *= 1.0/distance;
+                float cosFactor = max(0.0, dot(normal, toLight));
+                float atten = u_PointLightIntensities[i] * clamp(1.0/(distance), 0.0, 1.0);
+                float intensity = cosFactor * atten;
                 diffuseLighting += u_PointLightColors[i] * intensity;
+
+                float specFactor = pow(max(0.0, dot(outRay, toLight)), u_Shininess);
+                specularLighting += u_PointLightColors[i] * atten * specFactor;
             } 
         #endif
 
@@ -129,7 +180,10 @@ local shaderBank = {
         
             diffuseLighting += (getLightmapColor() - vec3(1.0));
 
-            return diffuseLighting;
+            return FragLighting(
+                diffuseLighting,
+                specularLighting
+            );
         }
     ]],
 
@@ -140,16 +194,23 @@ local shaderBank = {
 
     frag_shadeFragmentStandard = [[
         vec3 baseColor = getBaseColor();
+        
+        /*
         #if LIGHTS
 
         #else
             outColor.rgb = baseColor;
         #endif
+        */
 
-        vec3 diffuseLighting = getDiffuseLighting();
-        outColor.rgb += baseColor * diffuseLighting; 
+        FragLighting lighting = getLighting();
 
+        outColor.rgb += baseColor * lighting.diffuseLighting; 
         outColor.rgb += getEmissiveColor();
+
+        #if LIGHTS
+            outColor.rgb += getSpecularColor() * lighting.specularLighting;
+        #endif
     ]],
 
     frag_shadeFragmentEnd = [[
@@ -205,7 +266,7 @@ local ShaderBuilder = {
             defines,
             shaderBank.com_varying,
             shaderBank.frag_init,
-            shaderBank.frag_getDiffuseLighting,
+            shaderBank.frag_getLighting,
             shaderBank.frag_shadeFragmentBegin,
             shaderBank.frag_shadeFragmentStandard,
             shaderBank.frag_shadeFragmentEnd,
@@ -233,7 +294,7 @@ shader.__index = {
         if (loveShader:hasUniform(name)) then
             loveShader:send(name, ...);
         else
-            print(name);
+            --print(name);
         end
     end,
 
@@ -324,6 +385,10 @@ local material = {
         uniforms.u_LightmapTexture = options.lightmapTexture;
         uniforms.u_UseLightmap = not not options.lightmapTexture;
         
+        uniforms.u_SpecularColor = options.specularColor or {0,0,0};
+        uniforms.u_UseSpecularTexture = not not options.specularTexture;
+        uniforms.u_SpecularTexture = options.specularTexture;
+        uniforms.u_Shininess = options.shininess or 1.0;
 
         return {
             shader = Shaders.standardShader,

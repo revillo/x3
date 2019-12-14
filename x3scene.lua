@@ -91,6 +91,16 @@ local transformMeta = {
         n:markDirty();
     end,
 
+    slerpBetween = function(n, qA, qB, t)
+        n.rotation:setSlerp(qA, qB, t);
+        n:markDirty();
+    end,
+
+    slerp = function(n, quat, t)
+        n.rotation:setSlerp(n.rotation, quat, t);
+        n:markDirty();
+    end,
+
     resetRotation = function(n)
         n.rotation:setIdentity();
         n:markDirty();
@@ -110,9 +120,9 @@ local transformMeta = {
 
     setRotation = function(n, q, y, z, w)
         if (y) then
-            n.quat:set(q,y,z,w);
+            n.rotation:set(q,y,z,w);
         else
-            n.quat:copy(q);
+            n.rotation:copy(q);
         end
         n:markDirty();
     end,
@@ -145,6 +155,16 @@ local transformMeta = {
         else
             n.position:add(v);
         end
+        n:markDirty();
+    end,
+
+    lerpBetween = function(n, v3A, v3B, t)
+        n.position:lerp(v3A, v3B, t);
+        n:markDirty();
+    end,
+
+    lerp = function(n, v3, t)
+        n.position:lerp(v3, t);
         n:markDirty();
     end,
 
@@ -316,7 +336,21 @@ end
 local instance = {};
 
 instance.__index = {
-    
+    setColor = function(i, r, g, b)
+        if (not i.color:equals(r, g, b)) then
+            i.color:set(r,g,b);
+            i:markDirty();
+        end
+    end,
+
+    getColor = function(i, out)
+        if (out) then
+            out:copy(i.color);
+            return out;
+        else
+            return i.color;
+        end
+    end
 };
 
 extend(instance.__index, transformMeta);
@@ -327,33 +361,71 @@ local entity = {};
 entity.__index = {
 
     setNumInstances = function(e, numInstances)
-
-        if (not e.mesh) then
-            error("Cannot instance entity without mesh.")
-        end
-
         if (e.numInstances == numInstances) then
             return;
         end
-
-        e.numInstances = numInstances;
-        local instances = {};
+        local instances = e.instances or {};
         
-        for i = 1,e.numInstances do
+        for i = 1, numInstances do
             instances[i] = {
                 position = x3m.vec3(),
                 rotation = x3m.quat(),
                 scale = x3m.vec3(1.0),
                 transform = x3m.mat4(),
+                color = x3m.vec3(1),
                 parent = e,
                 uuid = i
             };
             setmetatable(instances[i], instance);
         end
+        
+        e.numInstances = numInstances;
+        e.instances = instances;
+        e.instanceMesh, e.instanceData = x3mesh.newInstanceMesh(instances, numInstances);
 
-        e.instanceMesh, e.instanceData = x3mesh.newInstanceMesh(instances);
+    end,
+
+    setNumInstances2 = function(e, numInstances)
+
+        --print(numInstances);
+
+        if (not e.mesh) then
+            --error("Cannot instance entity without mesh.")
+        end
+
+        if (e.numInstances == numInstances) then
+            return;
+        elseif(e.numInstances > numInstances) then
+            e.numInstances = numInstances;
+            return;
+        end
+     
+        local instances = e.instances or {};
+        
+        for i = e.numInstances+1, numInstances do
+            instances[i] = {
+                position = x3m.vec3(),
+                rotation = x3m.quat(),
+                scale = x3m.vec3(1.0),
+                transform = x3m.mat4(),
+                color = x3m.vec3(1),
+                parent = e,
+                uuid = i
+            };
+            setmetatable(instances[i], instance);
+        end
+        
+        e.numInstances = numInstances;
         e.instances = instances;
 
+        if (numInstances > e.instancesAllocated) then
+            e.instanceMesh, e.instanceData = x3mesh.newInstanceMesh(instances, numInstances);
+            e.instancesAllocated = numInstances;
+        else
+            x3mesh.updateInstanceMesh(e.instances, e.instanceMesh, e.instanceData, e.numInstances);
+        end
+
+       
     end,
 
     getNumInstances = function(e)
@@ -387,12 +459,12 @@ entity.__index = {
             n:markClean();
         end
 
-        x3mesh.updateInstanceMesh(e.instances, e.instanceMesh, e.instanceData);
+        x3mesh.updateInstanceMesh(e.instances, e.instanceMesh, e.instanceData, e.numInstances);
 
-        for i = 1, e.numInstances do
+        --for i = 1, e.numInstances do
             --print(i);
             --print(e.instances[i].transform:__tostring());
-        end
+        --end
 
     end,
 
@@ -407,7 +479,19 @@ entity.__index = {
         end
     end,
 
+    hide = function(e)
+        e.hidden = true;
+    end,
+
+    show = function(e)
+        e.hidden = false;
+    end,
+
     render = function(e)
+
+        if (e.hidden) then
+            return
+        end
         
         --e:updateTransform();
 
@@ -447,6 +531,7 @@ entity.__index = {
         modelMesh:attachAttribute("InstanceTransform2", instanceMesh, "perinstance");
         modelMesh:attachAttribute("InstanceTransform3", instanceMesh, "perinstance");
         modelMesh:attachAttribute("InstanceTransform4", instanceMesh, "perinstance");
+        modelMesh:attachAttribute("InstanceColor", instanceMesh, "perinstance");
 
         love.graphics.drawInstanced(modelMesh, e.numInstances);
     end
@@ -464,7 +549,8 @@ entity.new = function(mesh, material)
         e = {
             mesh = mesh,
             material = material,
-            numInstances = 0
+            numInstances = 0,
+            instancesAllocated = 0
         };
         initNode(e);
     else

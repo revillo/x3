@@ -66,8 +66,8 @@ love.load = function()
 
         x3.material.newUnlit({
             baseColor = {1.0,1.0,1.0},
-            baseTexture = loadImg("sky")
-            --hemiColors = {{0.5, 0.5, 1.0}, { 0.3, 0.5, 0.2}}
+            baseTexture = loadImg("sky"),
+            hemiColors = {{1,1,1}, {1,1,1}}
         })
     );
     scene:add(sky);
@@ -80,7 +80,9 @@ love.load = function()
                 baseColor = color,
                 baseTexture = tex,
                 lightmapTexture = aotex,
-                hemiColors = {{ 0.3, 0.5, 0.2}, {0.8, 0.8, 1.0}}
+                hemiColors = {{ 0.3, 0.5, 0.2}, {0.8, 0.8, 1.0}},
+                specularColor = {0.5, 0.5, 0.5},
+                shininess = 20
             })
         );
 
@@ -108,7 +110,9 @@ love.load = function()
             baseColor = {0.3, 0.9, 0.6},
             emissiveColor = {0.07, 0.2, 0.0},
             hemiColors = {{ 0.3, 0.3, 0.3}, {0.9, 0.9, 0.8}},
-            cullMode = "none"
+            cullMode = "none",
+            specularColor = {0.5, 0.5, 0.5},
+            shininess = 20
         })
     );
 

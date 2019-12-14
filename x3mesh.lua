@@ -10,17 +10,13 @@ local BASIC_ATTRIBUTES = {
   UV_ATTRIBUTE
 }
 
-local TRANSFORM_ATTRIBUTES = {
+local INSTANCE_ATTRIBUTES = {
     {"InstanceTransform1", "float", 4},
     {"InstanceTransform2", "float", 4},
     {"InstanceTransform3", "float", 4},
-    {"InstanceTransform4", "float", 4}
+    {"InstanceTransform4", "float", 4},
+    {"InstanceColor", "float", 4}
 }
-
---[[
-local TRANSFORM_ATTRIBUTES = {
-    {"InstancePosition", "float", 4}
-}]]
 
 local x3m = require('x3math');
 local vec3 = x3m.vec3;
@@ -190,6 +186,10 @@ local mesh = {
 
     newBox = function(sx, sy, sz)
 
+        sx = sx or 1;
+        sy = sy or sx;
+        sz = sz or sx;
+
         sx, sy, sz = sx * 0.5, sy * 0.5, sz * 0.5;
 
         local x0, x1 = sx, -sx;
@@ -232,30 +232,43 @@ local mesh = {
         );
     end,
 
-    newInstanceMesh = function(instances)
+    newInstanceMesh = function(instances, count)
 
         local vs = {};
 
-        for i, t in ipairs(instances) do
+        for i = 1, count do
+            local t = instances[i];
             vs[i] = {};
             t.transform:toColMajorArray(vs[i]);
+            vs[i][17] = t.color.x;
+            vs[i][18] = t.color.y;
+            vs[i][19] = t.color.z;
+            vs[i][20] = 1.0;
         end
 
         local instanceMesh = love.graphics.newMesh(
-            TRANSFORM_ATTRIBUTES, vs
+            INSTANCE_ATTRIBUTES, vs
         );
 
         return instanceMesh, vs;
 
     end,
 
-    updateInstanceMesh = function(instances, mesh, vs)
-        vs = vs or {};
+    updateInstanceMesh = function(instances, mesh, vs, count)
+        --vs = vs or {};
+        vs = {};
 
-        for i, t in ipairs(instances) do
+        for i = 1, count do
+            local t = instances[i];
             vs[i] = vs[i] or {};
             t.transform:toColMajorArray(vs[i]);
+            vs[i][17] = t.color.x;
+            vs[i][18] = t.color.y;
+            vs[i][19] = t.color.z;
+            vs[i][20] = 1.0;
         end
+
+        vs[count + 1] = nil;
 
         mesh:setVertices(vs);
     end,
