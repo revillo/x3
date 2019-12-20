@@ -123,7 +123,7 @@ local mesh = {
         }, "strip", "static");
     end,
 
-    newSphere = function(radius, rings, slices)
+    newSphere = function(radius, rings, slices, flipSides)
         rings = rings or 16;
         slices = slices or 16;
 
@@ -151,6 +151,24 @@ local mesh = {
             addVertex(a);
             addVertex(d);
             addVertex(c);
+        end
+
+        if (flipSides) then
+
+            addVertex = function(v)
+                verts[vIndex] = {v[1] * radius, v[2] * radius, v[3] * radius, -v[1], -v[2], -v[3], v[4], v[5]}
+                vIndex = vIndex + 1;
+            end
+
+            addQuad = function(a,b,c,d) 
+                addVertex(a);
+                addVertex(b);
+                addVertex(c);
+
+                addVertex(a);
+                addVertex(c);
+                addVertex(d);
+            end
         end
 
         for r = 0, nr do
@@ -243,7 +261,7 @@ local mesh = {
             vs[i][17] = t.color.x;
             vs[i][18] = t.color.y;
             vs[i][19] = t.color.z;
-            vs[i][20] = 1.0;
+            vs[i][20] = t.alpha;
         end
 
         local instanceMesh = love.graphics.newMesh(
@@ -255,8 +273,8 @@ local mesh = {
     end,
 
     updateInstanceMesh = function(instances, mesh, vs, count)
-        --vs = vs or {};
-        vs = {};
+        vs = vs or {};
+        --vs = {};
 
         for i = 1, count do
             local t = instances[i];
@@ -265,7 +283,7 @@ local mesh = {
             vs[i][17] = t.color.x;
             vs[i][18] = t.color.y;
             vs[i][19] = t.color.z;
-            vs[i][20] = 1.0;
+            vs[i][20] = t.alpha;
         end
 
         vs[count + 1] = nil;

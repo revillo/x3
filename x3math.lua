@@ -32,6 +32,34 @@ vec3.__index = {
         return v3tmp:lengthsq() < epsi;
     end,
 
+    setMin = function(v, a, b)
+        v.x = math.min(a.x,b.x);
+        v.y = math.min(a.y,b.y);
+        v.z = math.min(a.z,b.z);
+    end,
+
+    setMax = function(v, a, b)
+        v.x = math.max(a.x,b.x);
+        v.y = math.max(a.y,b.y);
+        v.z = math.max(a.z,b.z);
+    end,
+
+    min = function(v, b)
+        v:setMin(v, b);
+    end,
+
+    max = function(v, b)
+        v:setMax(v, b);
+    end,
+
+    lessThan = function(v, b)
+        return v.x < b.x and v.y < b.y and v.z < b.z;
+    end,
+
+    greaterThan = function(v, b)
+        return v.x > b.x and v.y > b.y and v.z > b.z;
+    end,
+
     invert = function(v)
         v:scale(-1);
     end,
@@ -128,6 +156,15 @@ vec3.__index = {
         return math.sqrt(a:lengthsq());
     end,
 
+    distance = function(a, b)
+        return math.sqrt(a:distancesq(b));
+    end,
+
+    distancesq = function(a, b)
+        local dx, dy, dz = a.x - b.x, a.y - b.y, a.z - b.z;
+        return dx * dx + dy * dy + dz * dz;
+    end,
+
     normalize = function(a)
         local length = a:length();
         if (length > 0.0) then
@@ -220,7 +257,7 @@ vec3.new = function(x, y, z)
     return v;
 end
 
-for i = 1,3 do
+for i = 1,10 do
     v3tmp[i] = vec3.new();
 end
 
@@ -731,7 +768,31 @@ for i = 1,3 do
     m4tmp[i] = mat4.new();
 end
 
+
+local intersectSphereSphere = function(c0, r0, c1, r1)
+    return c0:distancesq(c1) < (r0 * r0 + r1 * r1 + 2 * r0 * r1);
+end
+
+local intersectSphereInvSphere = function(c0, r0, c1, r1)
+    return c0:distance(c1) > r1 - r0;
+end
+
+
+local intersectSphereAABB = function(c, r, bmin, bmax)
+    local dmin = 0;
+
+    if ( c.x < bmin.x ) then dmin = dmin + math.sqrt( c.x  - bmin.x )
+        elseif( c.x  > bmax.x ) then dmin = dmin + math.sqrt( c.x  - bmax.x ) end     
+    if ( c.y < bmin.y ) then dmin = dmin + math.sqrt( c.y  - bmin.y )
+        elseif( c.y  > bmax.y ) then dmin = dmin + math.sqrt( c.y  - bmax.y ) end     
+    if ( c.z < bmin.z ) then dmin = dmin + math.sqrt( c.z  - bmin.z )
+        elseif( c.z > bmax.z ) then dmin = dmin + math.sqrt( c.z  - bmax.z ) end     
+
+    return dmin <= (r * r);
+end
+
 local ray = {};
+
 
 ray.__index = {
     hitSphere = function(ray, sCenter, sRadius)
@@ -760,8 +821,33 @@ ray.__index = {
         if (t0 < 0 and t1 < 0) then return nil, nil end
 
         return t0, t1;
+    end,
 
+    --bmin, bmax : vec3 
+    --https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525
+    hitAABB = function(ray, bmin, bmax)
+        
+        local invD, t0s, t1s, tlo, thi = v3tmp[1], v3tmp[2], v3tmp[3], v3tmp[4], v3tmp[5];
+        local tmin, tmax;
 
+        invD:copy(ray.direction);
+        invD:invert();
+
+        t0s:copy(bmin);
+        t0s:sub(ray.origin);
+        t0s:mul(invD);
+
+        t1s:copy(bmax);
+        t1s:sub(ray.origin);
+        t1s:mul(invD);
+
+        tlo:setMin(t0s, t1s);
+        thi:setMax(t0s, t1s);
+        
+        tmin = math.max(math.max(tlo.x, tlo.y), tlo.z);
+        tmax = math.max(math.min(thi.x, thi.y), thi.z);
+
+        if (tmin < tmax) then return tmin, tmax end;
     end,
 
     deserialize = function(r, data)
@@ -809,7 +895,6 @@ Collider.__index = {
     -- id: any, center : vec3, radius : number, data : any
     addSphere = function(c, id, center, radius, data)
         
-
         if (c.colliders[id]) then
             local col = c.colliders[id];
             col.type = "sphere";
@@ -821,12 +906,58 @@ Collider.__index = {
                 type = "sphere",
                 center = center:clone(),
                 radius = radius,
-                id = id,
                 data = data
             };
 
             c.colliders[id] = collider;
         end
+    end,
+
+    addInvereSphere = function(c, id, center, radius, data)
+        c:addSphere(id, center, radius, data);
+        c.colliders[id].type = "isphere"
+    end,
+
+    --sx : number (box size x axis from side to side)
+    --rotation optional quaternionn (can pass nil)
+    addBox = function(c, id, center, sx, sy, sz, rotation, data)
+
+        local collider = c.colliders[id];
+
+        if (collider) then
+            collider.type = "box";
+            collider.center:copy(center);
+            collider.sx, collider.sy, collider.sz = sx, sy, sz;
+            collider.data = data or collider.data;
+            if (rotation) then
+                collider.rotation:copy(rotation);
+            end
+        else
+            collider = {
+                type = "box",
+                center = center:clone(),
+                sx = sx,
+                sy = sy,
+                sz = sz,
+                data = data
+            };
+
+            if (rotation) then
+                collider.rotation = rotation:clone();
+            end
+
+            c.colliders[id] = collider;
+        end
+
+        local s = v3tmp[1];
+        s:copy(center);
+        s:scale(0.5);
+
+        collider.min = center:clone();
+        collider.min:sub(s);
+
+        collider.max = center:clone();
+        collider.max:add(s);
     end,
 
     remove = function(c, id)
@@ -837,15 +968,42 @@ Collider.__index = {
         c.colliders = {};
     end,
 
-    traceRay = function(c, ray)
-        local nearestDistance = 100000;
+    testSphere =  function(c, center, radius, callback)
+        for uuid, col in pairs(c.colliders) do
+            local hit = false;
+            if (col.type == "sphere") then
+                hit = intersectSphereSphere(center, radius, col.center, col.radius);
+            elseif (col.type == "isphere") then
+                hit = intersectSphereInvSphere(center, radius, col.center, col.radius);
+            else
+                hit = intersectSphereAABB(center, radius, col.min, col.max)
+            end
+
+            if (hit) then
+                callback(uuid, col.data);
+            end        
+        end
+    end,
+
+    traceRay = function(c, ray, callback)
+        local nearestDistance = 1000000;
         local nearestData;
         local nearestId;
 
         for uuid, col in pairs(c.colliders) do
-            local t0, t1 = ray:hitSphere(col.center, col.radius);
 
+            local t0, t1;
+
+            if (col.type == "sphere" or col.type == "isphere") then
+                t0, t1 = ray:hitSphere(col.center, col.radius);
+            else
+                t0, t1 = ray:hitAABB(col.min, col.max);
+            end
             --print(uuid, col.center:__tostring(), col.radius);
+
+            if (callback and t0) then
+                callback(uuid, t0, col.data);
+            end
 
             if (t0 and t0 < nearestDistance) then
                 nearestDistance = t0;
@@ -899,6 +1057,6 @@ return {
     quat = quat.new,
     mat4 = mat4.new,
     ray = ray.new,
-    newCollider = Collider.new,__index,
+    newCollider = Collider.new,
     hexColor = hexColor
 }

@@ -18,7 +18,7 @@ local shaderBank = {
         varying vec2 v_TexCoord1;
 
         #if INSTANCES
-            varying vec3 v_InstanceColor;
+            varying vec4 v_InstanceColor;
         #endif
     ]],
 
@@ -47,7 +47,7 @@ local shaderBank = {
             //v_TexCoord1 = VertexTexCoord2.rg;
 
             #if INSTANCES
-                v_InstanceColor = InstanceColor.rgb;
+                v_InstanceColor = InstanceColor;
             #endif
 
             v_TexCoord0.y = 1.0 - v_TexCoord0.y;
@@ -124,6 +124,10 @@ local shaderBank = {
             return lightmapColor;
         }
 
+        vec3 getNormal() {
+            return normalize(v_WorldNormal);
+        }
+
         #if LIGHTS
         extern int u_NumPointLights;
         extern vec3 u_PointLightPositions[4];
@@ -153,7 +157,7 @@ local shaderBank = {
         FragLighting getLighting() {
             vec3 diffuseLighting = vec3(0.0);
             vec3 specularLighting = vec3(0.0);
-            vec3 normal = normalize(v_WorldNormal);
+            vec3 normal = getNormal();
 
         #if LIGHTS
 
@@ -275,6 +279,25 @@ local ShaderBuilder = {
 
         return table.concat(result);
 
+    end,
+
+    buildCustomFragment = function(options)
+        local defines = shaderBank.makeDefines(options.defines or {
+            INSTANCES = 1,
+            LIGHTS = 0
+        });
+
+        local result = {
+            defines,
+            shaderBank.com_varying,
+            shaderBank.frag_init,
+            shaderBank.frag_shadeFragmentBegin,
+            options.shadeFragment or "",
+            shaderBank.frag_shadeFragmentEnd,
+            shaderBank.frag_main
+        };
+
+        return table.concat(result);
     end
 
 }
@@ -318,7 +341,26 @@ shader.__index = {
     end,
 }
 
-shader.newStandardShader = function(options)
+shader.newCustom = function(options)
+    options.defines = options.defines or {
+        INSTANCES = 1,
+        LIGHTS = 1
+    }
+
+    local s = {
+        loveShader = makeShader(
+            ShaderBuilder.buildStandardVertex(options), 
+            ShaderBuilder.buildCustomFragment(options)
+        ),
+
+        options = options
+    };
+
+    setmetatable(s, shader);
+    return s;
+end
+
+shader.newStandard = function(options)
 
     options.defines = options.defines or {
         INSTANCES = 1,
@@ -340,14 +382,14 @@ end
 
 local Shaders = {
 
-    standardShader = shader.newStandardShader({
+    standardShader = shader.newStandard({
         defines = {
             INSTANCES = 1,
             LIGHTS = 1
         }
     }),
 
-    unlitShader = shader.newStandardShader({
+    unlitShader = shader.newStandard({
         defines = {
             INSTANCES = 1,
             LIGHTS = 0
@@ -409,10 +451,21 @@ local material = {
             options = options or {}
         }
 
+    end,
+
+    newCustom = function(shader, uniforms)
+
+        return {
+            shader = shader,
+            uniforms = uniforms or {},
+            options = shader.options
+        }
+
     end
 }
 
 return {
     material = material,
-    shader = shader
+    shader = shader,
+    ShaderBuilder = ShaderBuilder
 }

@@ -136,6 +136,21 @@ end
 
 local CamPos = {0,0,0};
 
+local renderShaderBin = function(shader, bin, lightUniforms)
+  if (bin.renderIndex == renderIndex) then
+    shader:setActive();
+    shader:sendMat4("u_ViewProjection", viewProjection);
+    shader:send("u_WorldCameraPosition", CamPos);
+    
+    sendLights(shader, lightUniforms);
+
+    local entities = bin.entities;
+    for i = 1,bin.size do
+      renderEntity(entities[i]);
+    end
+  end
+end
+
 x3r.render = function(camera, scene, canvas3D, options)
   renderIndex = renderIndex + 1;
 
@@ -184,22 +199,16 @@ x3r.render = function(camera, scene, canvas3D, options)
   local lightUniforms = fillLightUniforms(bins.lights);
 
   for x3Shader, bin in pairs(bins.shaders) do
-    if (bin.renderIndex == renderIndex) then
-
-      x3Shader:setActive();
-      x3Shader:sendMat4("u_ViewProjection", viewProjection);
-      x3Shader:send("u_WorldCameraPosition", CamPos);
-
-      
-      sendLights(x3Shader, lightUniforms);
-
-      local entities = bin.entities;
-      for i = 1,bin.size do
-        renderEntity(entities[i]);
-      end
+    if (not x3Shader.options.transparent) then
+      renderShaderBin(x3Shader, bin, lightUniforms);
     end
   end
 
+  for x3Shader, bin in pairs(bins.shaders) do
+    if (x3Shader.options.transparent) then
+      renderShaderBin(x3Shader, bin, lightUniforms);
+    end
+  end
   --renderEntity(scene, viewProjection);
 
   love.graphics.setShader();

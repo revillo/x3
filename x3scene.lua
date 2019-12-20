@@ -14,6 +14,7 @@ local extend = function(meta, props)
 end
 
 local v3tmp = x3m.vec3();
+local V_ZERO = x3m.vec3(0);
 
 local transformMeta = {
 
@@ -35,7 +36,7 @@ local transformMeta = {
         end
     end,
 
-    getLocalXAxis = function(n, out)
+    getRelXAxis = function(n, out)
         n:updateTransform();
         local v = out or v3tmp;
         v:set(n.transform[0], n.transform[1], n.transform[2]);
@@ -43,7 +44,7 @@ local transformMeta = {
         return v;
     end,
 
-    getLocalYAxis = function(n, out)
+    getRelYAxis = function(n, out)
         n:updateTransform();
         local v = out or v3tmp;
         v:set(n.transform[4], n.transform[5], n.transform[6]);
@@ -51,7 +52,7 @@ local transformMeta = {
         return v;
     end,
 
-    getLocalZAxis = function(n, out)
+    getRelZAxis = function(n, out)
         n:updateTransform();
         local v = out or v3tmp;
         v:set(n.transform[8], n.transform[9], n.transform[10]);
@@ -107,15 +108,15 @@ local transformMeta = {
     end,
 
     rotateLocalX = function(n, angle)
-        n:rotateAxis(n:getLocalXAxis(), angle);
+        n:rotateAxis(n:getRelXAxis(), angle);
     end,
 
     rotateLocalY = function(n, angle)
-        n:rotateAxis(n:getLocalYAxis(), angle);
+        n:rotateAxis(n:getRelYAxis(), angle);
     end,
 
     rotateLocalZ = function(n, angle)
-        n:rotateAxis(n:getLocalZAxis(), angle);
+        n:rotateAxis(n:getRelZAxis(), angle);
     end,
 
     setRotation = function(n, q, y, z, w)
@@ -124,6 +125,12 @@ local transformMeta = {
         else
             n.rotation:copy(q);
         end
+        n:markDirty();
+    end,
+
+    orient = function(n, forward, up)
+        n.transform:setLookAt(V_ZERO, forward, up);
+        n.rotation:fromMat4(n.transform);
         n:markDirty();
     end,
 
@@ -158,6 +165,11 @@ local transformMeta = {
         n:markDirty();
     end,
 
+    applyVelocity = function(n, vel, dt)
+        n.position:addScaled(vel, dt);
+        n:markDirty();
+    end,
+
     lerpBetween = function(n, v3A, v3B, t)
         n.position:lerp(v3A, v3B, t);
         n:markDirty();
@@ -169,19 +181,19 @@ local transformMeta = {
     end,
 
     moveLocalX = function(n, dist)
-        n:getLocalXAxis(v3tmp);
+        n:getRelXAxis(v3tmp);
         v3tmp:scale(dist);
         n:move(v3tmp);
     end,
 
     moveLocalY = function(n, dist)
-        n:getLocalYAxis(v3tmp);
+        n:getRelYAxis(v3tmp);
         v3tmp:scale(dist);
         n:move(v3tmp);
     end,
 
     moveLocalZ = function(n, dist)
-        n:getLocalZAxis(v3tmp);
+        n:getRelZAxis(v3tmp);
         v3tmp:scale(dist);
         n:move(v3tmp);
     end,
@@ -343,6 +355,13 @@ instance.__index = {
         end
     end,
 
+    setAlpha = function(i, a)
+        if (i.alpha ~= a) then
+            i.alpha = a;
+            i:markDirty();
+        end
+    end,
+
     getColor = function(i, out)
         if (out) then
             out:copy(i.color);
@@ -373,6 +392,7 @@ entity.__index = {
                 scale = x3m.vec3(1.0),
                 transform = x3m.mat4(),
                 color = x3m.vec3(1),
+                alpha = 1,
                 parent = e,
                 uuid = i
             };
