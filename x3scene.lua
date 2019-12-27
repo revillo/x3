@@ -4,6 +4,7 @@ local vec3 = x3m.vec3;
 local quat = x3m.quat;
 local mat4 = x3m.mat4;
 
+local entity = {};
 
 local x3mesh = require("x3mesh");
 
@@ -15,6 +16,7 @@ end
 
 local v3tmp = x3m.vec3();
 local V_ZERO = x3m.vec3(0);
+local V_Y = x3m.vec3(0,1,0);
 
 local transformMeta = {
 
@@ -107,15 +109,30 @@ local transformMeta = {
         n:markDirty();
     end,
 
-    rotateLocalX = function(n, angle)
+    setX = function(n,x)
+        n.position.x = x;
+        n:markDirty();
+    end,
+    
+    setY = function(n,y)
+        n.position.y = y;
+        n:markDirty();
+    end,
+    
+    setZ = function(n,z)
+        n.position.z = z;
+        n:markDirty();
+    end,
+
+    rotateRelX = function(n, angle)
         n:rotateAxis(n:getRelXAxis(), angle);
     end,
 
-    rotateLocalY = function(n, angle)
+    rotateRelY = function(n, angle)
         n:rotateAxis(n:getRelYAxis(), angle);
     end,
 
-    rotateLocalZ = function(n, angle)
+    rotateRelZ = function(n, angle)
         n:rotateAxis(n:getRelZAxis(), angle);
     end,
 
@@ -180,19 +197,19 @@ local transformMeta = {
         n:markDirty();
     end,
 
-    moveLocalX = function(n, dist)
+    moveRelX = function(n, dist)
         n:getRelXAxis(v3tmp);
         v3tmp:scale(dist);
         n:move(v3tmp);
     end,
 
-    moveLocalY = function(n, dist)
+    moveRelY = function(n, dist)
         n:getRelYAxis(v3tmp);
         v3tmp:scale(dist);
         n:move(v3tmp);
     end,
 
-    moveLocalZ = function(n, dist)
+    moveRelZ = function(n, dist)
         n:getRelZAxis(v3tmp);
         v3tmp:scale(dist);
         n:move(v3tmp);
@@ -226,6 +243,12 @@ local nodeMeta = {
             child:markDirty();
         end
         return n;
+    end,
+
+    addNew = function(n, ...)
+        local ent = entity.new(...);
+        n:add(ent);
+        return ent;
     end,
 
     remove = function(n, child)
@@ -293,6 +316,13 @@ camera.__index = {
         --c.position:copy(eye);
         c.transform:setLookAt(c.position, target, up);
         c.rotation:fromMat4(c.transform);
+    end,
+
+    orbit_Y_UP = function(c, target, angle1, angle2, radius)
+        c.position:fromSphere(angle1, angle2 + math.pi * 0.5, radius);
+        c.position.z, c.position.y = c.position.y, c.position.z;
+        c.position:add(target);
+        c:lookAt(target, V_Y);
     end,
 
     updateView = function(c)
@@ -375,7 +405,6 @@ instance.__index = {
 extend(instance.__index, transformMeta);
 
 
-local entity = {};
 
 entity.__index = {
 

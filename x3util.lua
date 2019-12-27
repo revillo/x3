@@ -54,9 +54,38 @@ Timer.new = function()
     return t;
 end
 
+local Automap = {};
 
+Automap.__index = {
+    add = function(m, val)
+        m.idCounter = m.idCounter + 1;
+        m.data[m.idCounter] = val;
+        m.size = m.size + 1;
+    end,
+
+    filter = function(m, fn, ...)
+        for id, val in pairs(m.data) do
+            if (fn(val, ...)) then
+                m.data[id] = nil;
+                m.size = m.size - 1;
+            end
+        end
+    end
+}
+
+Automap.new = function()
+    local m = {
+        data = {},
+        idCounter = 0,
+        size = 0
+    };
+
+    setmetatable(m, Automap);
+    return m;
+end
 
 return {
     now = now,
-    newTimer = Timer.new
+    newTimer = Timer.new,
+    newAutomap = Automap.new
 }

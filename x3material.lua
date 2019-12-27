@@ -13,9 +13,9 @@ local shaderBank = {
 
     com_varying = [[
         varying vec3 v_WorldNormal;
-        varying vec3 v_WorldPosition;
-        varying vec2 v_TexCoord0;
-        varying vec2 v_TexCoord1;
+        varying highp vec3 v_WorldPosition;
+        varying highp vec2 v_TexCoord0;
+        varying highp vec2 v_TexCoord1;
 
         #if INSTANCES
             varying vec4 v_InstanceColor;
@@ -69,7 +69,8 @@ local shaderBank = {
             vec3 specularLighting;
         };
 
-        extern vec3 u_WorldCameraPosition;
+        extern highp vec3 u_WorldCameraPosition;
+        extern highp float u_Time;
 
         extern vec3 u_BaseColor;
         extern bool u_UseBaseTexture;
@@ -152,7 +153,6 @@ local shaderBank = {
     ]],
 
     frag_getLighting = [[
-
 
         FragLighting getLighting() {
             vec3 diffuseLighting = vec3(0.0);
@@ -291,8 +291,9 @@ local ShaderBuilder = {
             defines,
             shaderBank.com_varying,
             shaderBank.frag_init,
+            options.fragHead or "",
             shaderBank.frag_shadeFragmentBegin,
-            options.shadeFragment or "",
+            options.fragShade or "",
             shaderBank.frag_shadeFragmentEnd,
             shaderBank.frag_main
         };

@@ -116,6 +116,18 @@ vec3.__index = {
         a.z = a.z + b.z * t;
     end,
 
+    project = function(a, b)
+        v3tmp[1]:copy(a);
+        a:setProject(v3tmp[1], b);
+    end,
+
+    --project vec3 a onto vec3 b and store in self
+    setProject = function(v, a, b)
+        v:copy(b);
+        v:normalize();
+        v:scale(a:dot(b));
+    end,
+
     sub = function(a, b)
         a.x = a.x - b.x;
         a.y = a.y - b.y;
@@ -1058,5 +1070,26 @@ return {
     mat4 = mat4.new,
     ray = ray.new,
     newCollider = Collider.new,
-    hexColor = hexColor
+    hexColor = hexColor,
+    COLOR = {
+        BLACK = {0,0,0},
+        WHITE = {1,1,1},
+        RED = {1,0,0},
+        GREEN = {0,1,0},
+        BLUE = {0,0,1},
+        PURPLE = {1,0,1},
+        YELLOW = {1,1,0},
+        ORANGE = {1, 0.5, 0},
+        CYAN = {0,1,1},
+        GRAY = {0.5,0.5,0.5},
+        GRAY1 = {0.1, 0.1, 0.1},
+        GRAY2 = {0.2, 0.2, 0.2},
+        GRAY3 = {0.3, 0.3, 0.3},
+        GRAY4 = {0.4, 0.4, 0.4},
+        GRAY5 = {0.5, 0.5, 0.5},
+        GRAY6 = {0.6, 0.6, 0.6},
+        GRAY7 = {0.7, 0.7, 0.7},
+        GRAY8 = {0.8, 0.8, 0.8},
+        GRAY9 = {0.9, 0.9, 0.9},
+    }
 }

@@ -141,6 +141,7 @@ local renderShaderBin = function(shader, bin, lightUniforms)
     shader:setActive();
     shader:sendMat4("u_ViewProjection", viewProjection);
     shader:send("u_WorldCameraPosition", CamPos);
+    shader:send("u_Time", love.timer.getTime());
     
     sendLights(shader, lightUniforms);
 
