@@ -23,13 +23,18 @@ vec3.__index = {
     end,
 
     equals = function(a, b, y, z)
+
+        return false;
+
+        --[[
         if (y) then
-            v3tmp:set(b,y,z);
+            v3tmp[1]:set(b,y,z);
         else
-            v3tmp:copy(a);
+            v3tmp[1]:copy(b);
         end
-        v3tmp:sub(b);
-        return v3tmp:lengthsq() < epsi;
+        v3tmp[1]:sub(a);
+        return v3tmp[1]:lengthsq() < epsi;
+        ]]
     end,
 
     setMin = function(v, a, b)

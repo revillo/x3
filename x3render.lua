@@ -37,14 +37,22 @@ end
 binEntity = function(entity, bins, renderIndex)
 
   if (entity.mesh and entity.material) then
-    local x3shader = entity.material.shader;
-    local bin = bins.shaders[x3shader] or {entities = {}, renderIndex = 0, size = 0}; 
 
-    bin.renderIndex = renderIndex;
-    bin.size = bin.size + 1;
-    bin.entities[bin.size] = entity;
+    if (entity.renderOrder and entity.renderOrder > 0) then
+      bins.ordered.size = bins.ordered.size + 1;
+      bins.ordered.entities[bins.ordered.size] = entity;
+    else
 
-    bins.shaders[x3shader] = bin;
+      local x3shader = entity.material.shader;
+      local bin = bins.shaders[x3shader] or {entities = {}, renderIndex = 0, size = 0}; 
+
+      bin.renderIndex = renderIndex;
+      bin.size = bin.size + 1;
+      bin.entities[bin.size] = entity;
+
+      bins.shaders[x3shader] = bin;
+
+    end
   end
 
   if (entity.isLight) then
@@ -71,6 +79,10 @@ local resetBins = function(scene)
 
   binsForScene[scene] = binsForScene[scene] or {
     shaders = {},
+    ordered = {
+      size = 0,
+      entities = {}
+    },
     lights = {
       Point = {entities = {}, renderIndex = 0, size = 0}
     };
@@ -86,7 +98,16 @@ local resetBins = function(scene)
     bin.size = 0;
   end
 
+  bins.ordered.size = 0;
+
+
   return bins;
+
+end
+
+local function roCompare(e1, e2)
+
+  return e1.renderOrder < e2.renderOrder;
 
 end
 
@@ -136,14 +157,19 @@ end
 
 local CamPos = {0,0,0};
 
+local prepareShader = function(shader, lightUniforms)
+  shader:setActive();
+  shader:sendMat4("u_ViewProjection", viewProjection);
+  shader:send("u_WorldCameraPosition", CamPos);
+  shader:send("u_Time", love.timer.getTime());
+  
+  sendLights(shader, lightUniforms);
+end
+
 local renderShaderBin = function(shader, bin, lightUniforms)
   if (bin.renderIndex == renderIndex) then
-    shader:setActive();
-    shader:sendMat4("u_ViewProjection", viewProjection);
-    shader:send("u_WorldCameraPosition", CamPos);
-    shader:send("u_Time", love.timer.getTime());
     
-    sendLights(shader, lightUniforms);
+    prepareShader(shader, lightUniforms);
 
     local entities = bin.entities;
     for i = 1,bin.size do
@@ -200,16 +226,30 @@ x3r.render = function(camera, scene, canvas3D, options)
   local lightUniforms = fillLightUniforms(bins.lights);
 
   for x3Shader, bin in pairs(bins.shaders) do
-    if (not x3Shader.options.transparent) then
+    --if (not x3Shader.options.transparent) then
       renderShaderBin(x3Shader, bin, lightUniforms);
-    end
+    --end
   end
 
+  if (bins.ordered.size > 0) then
+    
+    bins.ordered.entities[bins.ordered.size + 1] = nil;
+
+    table.sort(bins.ordered.entities, roCompare);
+    for i, entity in ipairs(bins.ordered.entities) do
+      prepareShader(entity.material.shader, lightUniforms);
+      renderEntity(entity);
+    end
+
+  end
+
+  --[[
   for x3Shader, bin in pairs(bins.shaders) do
     if (x3Shader.options.transparent) then
       renderShaderBin(x3Shader, bin, lightUniforms);
     end
   end
+  ]]
   --renderEntity(scene, viewProjection);
 
   love.graphics.setShader();

@@ -379,6 +379,11 @@ local instance = {};
 
 instance.__index = {
     setColor = function(i, r, g, b)
+
+        if type(r) == "table" then
+            r,g,b = r[1], r[2], r[3];
+        end
+
         if (not i.color:equals(r, g, b)) then
             i.color:set(r,g,b);
             i:markDirty();
