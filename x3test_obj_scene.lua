@@ -81,8 +81,8 @@ love.load = function()
                 baseTexture = tex,
                 lightmapTexture = aotex,
                 hemiColors = {{ 0.3, 0.5, 0.2}, {0.8, 0.8, 1.0}},
-                specularColor = {0.5, 0.5, 0.5},
-                shininess = 20
+                --specularColor = {0.5, 0.5, 0.5},
+                --shininess = 20
             })
         );
 
@@ -116,7 +116,7 @@ love.load = function()
         })
     );
 
-    scene:add(grass);
+    --scene:add(grass);
     grass:setNumInstances(200);
 
     local grassPos = x3.vec3();
@@ -177,7 +177,8 @@ love.draw = function()
 
     local w, h = love.graphics.getDimensions();
     x3.render(camera, scene, canvas3D);
-    love.graphics.draw(canvas3D.color, 0, h, 0, 1, -1);
+    --love.graphics.draw(canvas3D.color, 0, h, 0, 1, -1);
+    x3.displayCanvas3D(canvas3D, 0, 0);
 end
 
 function love.keypressed(key)

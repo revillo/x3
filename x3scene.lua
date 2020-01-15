@@ -230,7 +230,7 @@ local transformMeta = {
 }
 
 local nodeMeta = {
-    add = function(n, child)
+    addChild = function(n, child)
         n.children[child.uuid] = child;
         
         if (child.parent) then
@@ -243,6 +243,14 @@ local nodeMeta = {
             child:markDirty();
         end
         return n;
+    end,
+
+    add = function(n, ...)
+        local children = {select(1,...)};
+
+        for _, child in pairs(children) do
+            n:addChild(child);
+        end
     end,
 
     addNew = function(n, ...)
@@ -539,6 +547,10 @@ entity.__index = {
 
     show = function(e)
         e.hidden = false;
+    end,
+
+    setRenderOrder = function(e, r)
+        e.renderOrder = r;
     end,
 
     render = function(e)

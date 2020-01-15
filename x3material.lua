@@ -316,6 +316,8 @@ shader.__index = {
     send = function(s, name, ...)
         local loveShader = s.loveShader;
         if (loveShader:hasUniform(name)) then
+
+
             loveShader:send(name, ...);
         else
             --print(name);
@@ -398,20 +400,29 @@ local Shaders = {
     })
 }
 
+local v3 = function(v)
+    if (v and v.toArray) then
+        return v:toArray();
+    else
+        return v;
+    end
+end
+
 local function materialDefaultUniforms(options)
 
     options.hemiColors = options.hemiColors or {{0,0,0}, {0,0,0}};
 
+
     return {
-        u_BaseColor = options.baseColor or {1,1,1},
+        u_BaseColor = v3(options.baseColor) or {1,1,1},
         u_UseBaseTexture = not not options.baseTexture,
         u_BaseTexture = options.baseTexture,
 
-        u_HemiLowColor = options.hemiColors[1] or {0,0,0},
-        u_HemiHighColor = options.hemiColors[2] or {0,0,0},
-        u_HemiDirection = options.hemiDirection or {0, 1, 0},
+        u_HemiLowColor = v3(options.hemiColors[1]) or {0,0,0},
+        u_HemiHighColor = v3(options.hemiColors[2]) or {0,0,0},
+        u_HemiDirection = v3(options.hemiDirection) or {0, 1, 0},
 
-        u_EmissiveColor = options.emissiveColor or {0,0,0},
+        u_EmissiveColor = v3(options.emissiveColor) or {0,0,0},
         u_UseEmissiveTexture = not not options.emissiveTexture,
         u_EmissiveTexture = options.emissiveTexture
     }
@@ -428,7 +439,7 @@ local material = {
         uniforms.u_LightmapTexture = options.lightmapTexture;
         uniforms.u_UseLightmap = not not options.lightmapTexture;
         
-        uniforms.u_SpecularColor = options.specularColor or {0,0,0};
+        uniforms.u_SpecularColor = v3(options.specularColor) or {0,0,0};
         uniforms.u_UseSpecularTexture = not not options.specularTexture;
         uniforms.u_SpecularTexture = options.specularTexture;
         uniforms.u_Shininess = options.shininess or 1.0;

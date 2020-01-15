@@ -22,6 +22,7 @@ vec3.__index = {
         a.x, a.y, a.z = b.x, b.y, b.z;
     end,
 
+    --TODO
     equals = function(a, b, y, z)
 
         return false;
@@ -99,6 +100,12 @@ vec3.__index = {
         v.x = a[1];
         v.y = a[2];
         v.z = a[3];
+    end,
+
+    toArray = function(v)
+        local out = {};
+        v:serialize(out);
+        return out;
     end,
 
     --Spherical to cartesian coordinates. Theta around z axis.
@@ -180,6 +187,11 @@ vec3.__index = {
     distancesq = function(a, b)
         local dx, dy, dz = a.x - b.x, a.y - b.y, a.z - b.z;
         return dx * dx + dy * dy + dz * dz;
+    end,
+
+    setLength = function(v, l)
+        v:normalize();
+        v:scale(l);
     end,
 
     normalize = function(a)

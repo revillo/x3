@@ -2,6 +2,7 @@
 
 local x3 = require('x3');
 
+if (CASTLE_PREFETCH) then
 CASTLE_PREFETCH({
     "x3math.lua",
     "x3render.lua",
@@ -10,6 +11,7 @@ CASTLE_PREFETCH({
     "x3material.lua",
     "loaders/x3obj.lua"
 });
+end
 
 local scene = x3.newEntity();
 local camera = x3.newCamera();

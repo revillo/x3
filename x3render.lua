@@ -15,7 +15,9 @@ x3r.newCanvas3D = function(...)
   colorCanvas:setFilter("linear", "linear");
 
   return {
-    color = colorCanvas;
+    color = colorCanvas,
+    width = colorCanvas:getWidth(),
+    height = colorCanvas:getHeight()
   }
 
 end
@@ -257,6 +259,13 @@ x3r.render = function(camera, scene, canvas3D, options)
 
 end
 
+x3r.displayCanvas3D = function (canvas3D, x, y)
+  
+  love.graphics.setShader();
+  love.graphics.setCanvas();
+
+  love.graphics.draw(canvas3D.color, x, y + canvas3D.height, 0, 1, -1);
+end
 
 return x3r;
 
