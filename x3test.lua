@@ -44,20 +44,26 @@ love.load = function()
     --camera.target:set(0,0,0);
     --camera.up:set(0,1,0);
 
-    --[[
+    
     floor = x3.newEntity(
         x3.mesh.newPlaneY(5, 5),
-        x3.material.newUnlitColor({0.5, 0.5, 0.5,1})
+        x3.material.newUnlit({
+            emissiveColor = {0.5, 0.5, 0.5}
+        })
     );
     floor.position:set(0,0,0);
     scene:add(floor);
 
+
     ball = x3.newEntity(
         x3.mesh.newSphere(1, 16, 16),
-        x3.material.newDebugTexCoords()
+        x3.material.newLit({
+            baseColor = {1,0,0}
+        })
     );
     ball.position:set(0, 0.5, 1);
     scene:add(ball);
+    --[[
 
     cube = x3.newEntity(
         x3.mesh.newBox(1, 1, 1),
@@ -78,23 +84,21 @@ love.load = function()
     model = x3.newEntity(
         mesh,
 
-        x3.material.newLitMesh({
+        x3.material.newLit({
             diffuseColor = {1,0,1}
         })
         --x3.material.newDebugNormalsInstanced(1000)
     );
 
     scene:add(model);
-    model.position:set(0.0, 0.0, 0.0)
+    model:setPosition(0.0, 0.0, 0.0);
 
     model:setNumInstances(5);
 
-    local instancePosition = x3.vec3();
-
     for i = 1,5 do
         local t = i;
-        instancePosition:set(math.sin(t), math.cos(t), t)
-        model:setInstance(i, instancePosition);
+        model:getInstance(i):setPosition(math.sin(t), math.cos(t) + 2, t)
+        model:getInstance(i):setScale(0.3);
     end
 
 end
@@ -105,7 +109,7 @@ local cameraUp = x3.vec3(0,1,0);
 love.update = function()   
 
     local t = love.timer.getTime();
-    camera.position:set(math.cos(t) * 5, 5, math.sin(t) * 5);
+    camera:setPosition(math.cos(t) * 5, 5, math.sin(t) * 5);
     --camera.target:set(0,0,0);
     camera:lookAt(cameraTarget, cameraUp);
     

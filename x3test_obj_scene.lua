@@ -132,8 +132,8 @@ love.load = function()
 
         gi:setPosition(math.sin(ptheta) * prad * 0.9, 0, math.cos(ptheta) * prad * 1.1);
         gi:setScale(math.random() * 0.15 + 0.01);
-        gi:rotateLocalY(math.random() * 10);
-        gi:rotateLocalX(math.random() * 0.2);
+        gi:rotateRelY(math.random() * 10);
+        gi:rotateRelX(math.random() * 0.2);
 
         --[[
         grassRot:setAxisAngle(up, math.random() * 4);
