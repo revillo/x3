@@ -10,6 +10,12 @@
 
 x3 is a renderer  for 3D games written primarily for use with Castle, but compatible with Love 2D 11. It features a math library designed to reduce garbage collection, a retained-mode node-based scene graph, hardware instancing and a simple but flexible material system that can support custom shaders. 
 
+
+
+Planned features not yet implemented include shadow mapping, normal mapping, gltf loading and PBR materials.
+
+
+
 ### Hello Box
 
 ![](tests/hellobox.png)
@@ -141,7 +147,7 @@ local ball = x3.newEntity(
             baseColor = {0,0,1}, -- {r,g,b}
             specularColor = x3.vec3(1,1,1), -- can use vec3 or table
             shininess = 30,
-            emissiveColor = {0,0,0.3}
+            emissiveColor = x3.hexColor(0x0000FF) -- same as {0,0,1}
         })
 )
 ```
@@ -255,13 +261,13 @@ Any value supported by love's **shader:send(...)** can be assigned in the list o
 
 ### Transparency and Render Order
 
+![](tests/transparency.png)
+
 Currently, transparency is only supported in custom shaders as above by setting outColor.a to a value less than 1.0.
 
-For transparent objects, it is important to render them back-to-front from the camera's perspective for proper alpha blending. This can be accomplished by setting the **renderOrder** propery of an entity with **:setRenderOrder(renderOrder)**
+For transparent objects, it is important to render them back-to-front from the camera's perspective for proper alpha blending. This can be accomplished by setting the **renderOrder** propery of an entity with **:setRenderOrder(renderOrder)**. A renderOrder of 1 will render first, then 2, then 3 etc... 
 
-A renderOrder of 1 will render first, then 2, then 3 etc... 
-
-
+If renderOrder is not specified, objects are binned and rendered by shader to reduce shader program switching on the gpu for a performance improvement.
 
 ### Instancing
 
