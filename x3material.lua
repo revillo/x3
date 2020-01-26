@@ -27,6 +27,8 @@ local shaderBank = {
         extern mat4 u_Model;
 
         attribute vec3 VertexNormal;
+        extern highp vec3 u_WorldCameraPosition;
+
         //attribute vec2 VertexTexCoord2;
     ]],
     
@@ -129,6 +131,8 @@ local shaderBank = {
             return normalize(v_WorldNormal);
         }
 
+        extern float u_DiffuseStep;
+
         #if LIGHTS
         extern int u_NumPointLights;
         extern vec3 u_PointLightPositions[4];
@@ -180,9 +184,16 @@ local shaderBank = {
         #endif
 
             float skyDot = dot(normal, u_HemiDirection);
-            diffuseLighting += mix( u_HemiLowColor, u_HemiHighColor, skyDot);
+            diffuseLighting += mix( u_HemiLowColor, u_HemiHighColor, skyDot * 0.5 + 0.5);
         
             diffuseLighting += (getLightmapColor() - vec3(1.0));
+
+            //#if LIGHTS
+                if (u_DiffuseStep > 0.0) {
+                    vec3 stepDiff = floor(diffuseLighting * u_DiffuseStep + vec3(0.5, 0.5, 0.5))/vec3(u_DiffuseStep);
+                    diffuseLighting = stepDiff;
+                } 
+            //#endif
 
             return FragLighting(
                 diffuseLighting,
@@ -208,8 +219,9 @@ local shaderBank = {
         */
 
         FragLighting lighting = getLighting();
-
         outColor.rgb += baseColor * lighting.diffuseLighting; 
+        
+
         outColor.rgb += getEmissiveColor();
 
         #if LIGHTS
@@ -257,6 +269,26 @@ local ShaderBuilder = {
         };
 
         return table.concat(result);
+    end,
+
+    buildCustomVertex = function(options)
+        
+        local defines = shaderBank.makeDefines(options.defines or {
+            INSTANCES = 1,
+            LIGHTS = 1
+        });
+
+        local result = {
+            defines,
+            shaderBank.com_varying,
+            shaderBank.a_instanceTransform,
+            shaderBank.vert_init,
+            shaderBank.vert_initFragData,
+            options.vertMain or shaderBank.vert_main
+        };
+
+        return table.concat(result);
+
     end,
 
     buildStandardFragment = function(options)
@@ -352,7 +384,7 @@ shader.newCustom = function(options)
 
     local s = {
         loveShader = makeShader(
-            ShaderBuilder.buildStandardVertex(options), 
+            ShaderBuilder.buildCustomVertex(options), 
             ShaderBuilder.buildCustomFragment(options)
         ),
 
@@ -412,7 +444,6 @@ local function materialDefaultUniforms(options)
 
     options.hemiColors = options.hemiColors or {{0,0,0}, {0,0,0}};
 
-
     return {
         u_BaseColor = v3(options.baseColor) or {1,1,1},
         u_UseBaseTexture = not not options.baseTexture,
@@ -424,7 +455,8 @@ local function materialDefaultUniforms(options)
 
         u_EmissiveColor = v3(options.emissiveColor) or {0,0,0},
         u_UseEmissiveTexture = not not options.emissiveTexture,
-        u_EmissiveTexture = options.emissiveTexture
+        u_EmissiveTexture = options.emissiveTexture,
+        u_DiffuseStep = (options.toonStep or 0) - 1
     }
 
 end
@@ -443,6 +475,7 @@ local material = {
         uniforms.u_UseSpecularTexture = not not options.specularTexture;
         uniforms.u_SpecularTexture = options.specularTexture;
         uniforms.u_Shininess = options.shininess or 1.0;
+
 
         return {
             shader = Shaders.standardShader,
