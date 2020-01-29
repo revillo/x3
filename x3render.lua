@@ -100,6 +100,7 @@ local resetBins = function(scene)
     bin.size = 0;
   end
 
+  bins.ordered.backupSize = bins.ordered.size;
   bins.ordered.size = 0;
 
 
@@ -233,9 +234,14 @@ x3r.render = function(camera, scene, canvas3D, options)
     --end
   end
 
-  if (bins.ordered.size > 0) then
+  local ordered = bins.ordered;
+  if (ordered.size > 0) then
     
-    bins.ordered.entities[bins.ordered.size + 1] = nil;
+    if (ordered.backupSize > ordered.size) then
+        for i = ordered.size + 1, ordered.backupSize do
+           ordered.entities[i] = nil;
+        end
+    end
 
     table.sort(bins.ordered.entities, roCompare);
     for i, entity in ipairs(bins.ordered.entities) do

@@ -202,6 +202,54 @@ local mesh = {
 
     end,
 
+    newCylinder = function(radius, length, sides, segments)
+
+        segments = segments or 1;
+        sides = sides or 8;
+        length = length or 1;
+        radius = radius or 1;
+
+        local faces = {};
+        local fi = 0;
+
+
+        local getPosition = function(i, j)
+            local angle = (i / sides) * math.pi * 2;
+            local dist = (j-1) / (segments);
+
+            return {math.sin(angle) * radius, math.cos(angle) * radius, dist * length};
+        end
+
+        for seg = 1,segments do
+            for side = 1, sides do
+                fi = fi + 1;
+
+                faces[fi] = quadVerts(
+                    getPosition(side, seg + 1),
+                    getPosition(side + 1, seg + 1),
+                    getPosition(side + 1, seg),
+                    getPosition(side, seg)
+                );
+
+            end
+        end
+
+        local verts = {};
+        local index = 1;
+        
+        for face = 1, fi do
+            for v = 1, 6 do
+              verts[index] = faces[face][v]; 
+              index = index + 1;
+            end    
+        end
+        
+        return love.graphics.newMesh(
+            BASIC_ATTRIBUTES, verts, "triangles", "static"
+        );
+
+    end,
+
     newBox = function(sx, sy, sz)
 
         sx = sx or 1;

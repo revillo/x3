@@ -253,6 +253,12 @@ local nodeMeta = {
         end
     end,
 
+    clearChildren = function(n)
+        for _, child in pairs(n.children) do
+            n:remove(child);
+        end
+    end,
+
     addNew = function(n, ...)
         local ent = entity.new(...);
         n:add(ent);
@@ -336,7 +342,14 @@ camera.__index = {
     updateView = function(c)
         --c:lookAt(c.position, c.target, c.up);
         c:updateTransform();
-        c.view:copy(c.transform);
+
+        if (c.parent) then
+            c.view:copy(c.worldTransform);
+
+        else
+            c.view:copy(c.transform);
+        end
+
         c.view:invert();
     end,
 
@@ -592,6 +605,7 @@ entity.__index = {
 
         local opts = e.material.options or {};
         love.graphics.setMeshCullMode(opts.cullMode or "back");
+        love.graphics.setBlendMode(opts.blendMode or "alpha");
 
         modelMesh:attachAttribute("InstanceTransform1", instanceMesh, "perinstance");
         modelMesh:attachAttribute("InstanceTransform2", instanceMesh, "perinstance");
